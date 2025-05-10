@@ -2,7 +2,7 @@ print("Starting app.py")
 
 import os
 import tempfile
-from flask import Flask, render_template, request, redirect, url_for, send_file, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, send_file, session
 import pdfplumber
 import pandas as pd
 from datetime import datetime, date, timedelta
@@ -10,7 +10,6 @@ import openai
 import pickle
 import json
 import re
-import httpx
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a secure key in production
@@ -129,13 +128,6 @@ def index():
         open(LOG_FILE, 'w').close()
         files = request.files.getlist('pdf')
         all_transactions = []
-        # Initialize progress tracking
-        session['progress'] = {
-            'current': 0,
-            'total': 0,
-            'status': 'parsing'
-        }
-        # Parse PDFs first
         for file in files:
             if file and file.filename.endswith('.pdf'):
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
@@ -143,58 +135,48 @@ def index():
                     transactions = parse_pdf_transactions(tmp.name)
                     os.unlink(tmp.name)
                 all_transactions.extend(transactions)
-        # Update total count
-        session['progress']['total'] = len(all_transactions)
-        session['progress']['status'] = 'categorizing'
-        # Process transactions in batches
-        categorized_transactions = []
-        batch_size = 5  # Process 5 transactions at a time
-        for i in range(0, len(all_transactions), batch_size):
-            batch = all_transactions[i:i + batch_size]
-            for transaction in batch:
-                result = categorize_and_enhance_transaction(transaction)
-                categorized_transactions.append({
-                    'date': transaction['date'],
-                    'description': transaction['description'],
-                    'amount': transaction['amount'],
-                    'category': result['category'],
-                    'enhanced_description': result['enhanced_description'],
-                    'card': transaction['card']
-                })
-                session['progress']['current'] += 1
-                session.modified = True
-        # Store the categorized data in session
-        session['categorized_data'] = categorized_transactions
-        session['progress']['status'] = 'complete'
-        session.modified = True
+        # Auto-categorize using OpenAI
+        for t in all_transactions:
+            t['category'], t['enhanced_description'] = categorize_and_enhance_transaction(t['description'])
+        # Save to a temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pkl') as tf:
+            pickle.dump(all_transactions, tf)
+            temp_filename = tf.name
+        session['transactions_file'] = temp_filename
+        print(f"Total transactions parsed: {len(all_transactions)}")
         return redirect(url_for('categorize'))
     return render_template('index.html')
 
-@app.route('/categorize', methods=['GET'])
+@app.route('/categorize', methods=['GET', 'POST'])
 def categorize():
-    try:
-        if 'categorized_data' not in session:
-            return redirect(url_for('index'))
-            
-        categorized_data = session['categorized_data']
-        # Sort transactions by date descending
-        categorized_data.sort(key=lambda x: x['date'], reverse=True)
-        
-        # Filter out repayment transactions for total spend calculation
-        filtered_transactions = [
-            t for t in categorized_data 
-            if not (t['description'].strip().upper() == 'AUTOMATIC PAYMENT - THANK YOU' or 
-                   t['description'].strip().upper().startswith('ACH DEPOSIT INTERNET TRANSFER'))
-        ]
-        
-        return render_template(
-            'categorize.html',
-            transactions=categorized_data,
-            filtered_transactions=filtered_transactions
+    transactions_file = session.get('transactions_file')
+    if not transactions_file or not os.path.exists(transactions_file):
+        return redirect(url_for('index'))
+    with open(transactions_file, 'rb') as tf:
+        transactions = pickle.load(tf)
+    # Sort transactions by date descending
+    transactions.sort(key=lambda t: t['date'], reverse=True)
+    if request.method == 'POST':
+        for i, t in enumerate(transactions):
+            t['category'] = request.form.get(f'category_{i}', '')
+        with open(transactions_file, 'wb') as tf:
+            pickle.dump(transactions, tf)
+        return redirect(url_for('summary'))
+
+    # Filter out repayment transactions for total spend calculation
+    def is_repayment(txn):
+        desc = txn['description'].strip().upper()
+        return (
+            desc == 'AUTOMATIC PAYMENT - THANK YOU' or
+            desc.startswith('ACH DEPOSIT INTERNET TRANSFER')
         )
-    except Exception as e:
-        app.logger.error(f"Error in categorize endpoint: {str(e)}")
-        return render_template('error.html', error=str(e))
+    filtered_transactions = [t for t in transactions if not is_repayment(t)]
+
+    return render_template(
+        'categorize.html',
+        transactions=transactions,
+        filtered_transactions=filtered_transactions
+    )
 
 @app.route('/export')
 def export():
@@ -295,92 +277,47 @@ def summary():
         bar_datasets=bar_datasets
     )
 
-@app.route('/progress')
-def progress():
+def categorize_and_enhance_transaction(description):
+    # Special case for card repayment
+    if description.strip().upper() == 'AUTOMATIC PAYMENT - THANK YOU':
+        return 'Card Repayment', 'Credit card bill payment'
+    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    prompt = (
+        f"Given this credit card transaction description: '{description}',\n"
+        "1. Categorize it with one of the following, do not create new categories: 'Food & Beverage', 'Health & Wellness', 'Travel (Taxi / Uber / Lyft / Revel)', 'Travel (Subway / MTA)', 'Gas & Fuel','Travel (Flights / Trains)', 'Hotel', 'Groceries', 'Entertainment', 'Shopping', 'Income / Refunds', 'Utilities (Electricity, Telecom, Internet)', 'Other (Miscellaneous)'.\n"
+        "2. Write a short, human-perceivable summary of the expense, including the merchant type and location if available. Follow the format: 'Merchant Name, Location, brief description of expense purpose (no more than 10 words)'\n"
+        "Return your answer as JSON in the following format (no markdown, no explanation, just JSON):\n"
+        '{"category": "...", "enhanced_description": "..."}'
+    )
     try:
-        if 'progress' not in session:
-            return jsonify({'error': 'No progress found'}), 404
-        progress_data = session['progress']
-        current = progress_data.get('current', 0)
-        total = progress_data.get('total', 0)
-        status = progress_data.get('status', '')
-        if current >= total and status == 'complete':
-            return jsonify({
-                'current': current,
-                'total': total,
-                'status': 'complete',
-                'redirect': url_for('categorize')
-            })
-        return jsonify({
-            'current': current,
-            'total': total,
-            'status': status
-        })
-    except Exception as e:
-        app.logger.error(f"Error in progress endpoint: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-def categorize_and_enhance_transaction(transaction):
-    try:
-        # Special case for card repayment
-        if "APPLE CARD PAYMENT" in transaction['description'].upper():
-            return {
-                'category': 'Card Payment',
-                'enhanced_description': 'Apple Card payment'
-            }
-        
-        # Configure OpenAI client with explicit HTTP client settings
-        client = openai.OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1"),
-            http_client=httpx.Client(
-                timeout=httpx.Timeout(30.0, connect=10.0),
-                limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
-            )
-        )
-        
-        # Create a more concise prompt
-        prompt = f"""Categorize this credit card transaction and provide an enhanced description:
-        Description: {transaction['description']}
-        Amount: {transaction['amount']}
-        Date: {transaction['date']}
-        
-        Return ONLY a JSON object with two fields:
-        1. "category": The transaction category (e.g., "Travel", "Food & Dining", "Shopping")
-        2. "enhanced_description": A clear, detailed description of the transaction
-        
-        Example response format:
-        {{"category": "Food & Dining", "enhanced_description": "Restaurant name, location, meal type"}}"""
-        
-        # Make the API call with a shorter timeout
         response = client.chat.completions.create(
             model="gpt-4.1-mini",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=150,
-            timeout=25  # 25 second timeout for the API call
+            max_tokens=200,
+            temperature=0.3
         )
-        
-        # Parse the response
-        try:
-            result = json.loads(response.choices[0].message.content)
-            return result
-        except json.JSONDecodeError:
-            # If JSON parsing fails, try to extract category and description from the text
-            content = response.choices[0].message.content
-            category = content.split('"category": "')[1].split('"')[0] if '"category": "' in content else "Uncategorized"
-            enhanced_description = content.split('"enhanced_description": "')[1].split('"')[0] if '"enhanced_description": "' in content else transaction['description']
-            return {
-                'category': category,
-                'enhanced_description': enhanced_description
-            }
-            
+        content = response.choices[0].message.content.strip()
+        print("OpenAI raw response:", content)
+        with open(LOG_FILE, 'a') as logf:
+            logf.write(f"{description}:\n{content}\n\n")
+        # Remove code block markers if present
+        if content.startswith("```"):
+            content = re.sub(r"^```[a-zA-Z]*\\n?", "", content)
+            content = content.rstrip("`").strip()
+        data = json.loads(content)
+        return data.get("category", "Uncategorized"), data.get("enhanced_description", description)
     except Exception as e:
-        app.logger.error(f"Error categorizing transaction: {str(e)}")
-        return {
-            'category': 'Uncategorized',
-            'enhanced_description': transaction['description']
-        }
+        with open(LOG_FILE, 'a') as logf:
+            logf.write(f"{description}:\nOpenAI error: {e}\n\n")
+        print(f"OpenAI error (combined): {e}")
+        return "Uncategorized", description
+
+@app.route('/progress')
+def progress():
+    if os.path.exists(LOG_FILE):
+        with open(LOG_FILE, 'r') as f:
+            return f.read()
+    return ""
 
 if __name__ == '__main__':
     app.run(debug=True)
