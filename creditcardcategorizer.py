@@ -129,6 +129,12 @@ def index():
         open(LOG_FILE, 'w').close()
         files = request.files.getlist('pdf')
         all_transactions = []
+        # Initialize progress tracking
+        session['progress'] = {
+            'current': 0,
+            'total': 0,
+            'status': 'parsing'
+        }
         # Parse PDFs first
         for file in files:
             if file and file.filename.endswith('.pdf'):
@@ -137,20 +143,29 @@ def index():
                     transactions = parse_pdf_transactions(tmp.name)
                     os.unlink(tmp.name)
                 all_transactions.extend(transactions)
-        # Categorize all transactions in a single loop
+        # Update total count
+        session['progress']['total'] = len(all_transactions)
+        session['progress']['status'] = 'categorizing'
+        # Process transactions in batches
         categorized_transactions = []
-        for transaction in all_transactions:
-            result = categorize_and_enhance_transaction(transaction)
-            categorized_transactions.append({
-                'date': transaction['date'],
-                'description': transaction['description'],
-                'amount': transaction['amount'],
-                'category': result['category'],
-                'enhanced_description': result['enhanced_description'],
-                'card': transaction['card']
-            })
+        batch_size = 5  # Process 5 transactions at a time
+        for i in range(0, len(all_transactions), batch_size):
+            batch = all_transactions[i:i + batch_size]
+            for transaction in batch:
+                result = categorize_and_enhance_transaction(transaction)
+                categorized_transactions.append({
+                    'date': transaction['date'],
+                    'description': transaction['description'],
+                    'amount': transaction['amount'],
+                    'category': result['category'],
+                    'enhanced_description': result['enhanced_description'],
+                    'card': transaction['card']
+                })
+                session['progress']['current'] += 1
+                session.modified = True
         # Store the categorized data in session
         session['categorized_data'] = categorized_transactions
+        session['progress']['status'] = 'complete'
         session.modified = True
         return redirect(url_for('categorize'))
     return render_template('index.html')
@@ -279,6 +294,31 @@ def summary():
         bar_labels=bar_labels,
         bar_datasets=bar_datasets
     )
+
+@app.route('/progress')
+def progress():
+    try:
+        if 'progress' not in session:
+            return jsonify({'error': 'No progress found'}), 404
+        progress_data = session['progress']
+        current = progress_data.get('current', 0)
+        total = progress_data.get('total', 0)
+        status = progress_data.get('status', '')
+        if current >= total and status == 'complete':
+            return jsonify({
+                'current': current,
+                'total': total,
+                'status': 'complete',
+                'redirect': url_for('categorize')
+            })
+        return jsonify({
+            'current': current,
+            'total': total,
+            'status': status
+        })
+    except Exception as e:
+        app.logger.error(f"Error in progress endpoint: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 def categorize_and_enhance_transaction(transaction):
     try:
