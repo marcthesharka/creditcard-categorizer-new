@@ -1,5 +1,6 @@
-Flask
-pdfplumber
-pandas
-openpyxl
-openai
+Flask==3.0.2
+pdfplumber==0.10.3
+pandas==2.2.1
+openpyxl==3.1.2
+openai==1.12.0
+gunicorn==21.2.0
