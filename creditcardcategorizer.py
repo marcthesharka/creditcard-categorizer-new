@@ -10,6 +10,7 @@ import openai
 import pickle
 import json
 import re
+import httpx
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a secure key in production
@@ -286,9 +287,9 @@ def categorize_and_enhance_transaction(description):
     client = openai.OpenAI(
         api_key=os.getenv("OPENAI_API_KEY"),
         base_url=os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1"),
-        http_client=openai.HttpxClient(
+        http_client=httpx.Client(
             timeout=30.0,
-            limits=openai.HttpxLimits(max_keepalive_connections=5, max_connections=10)
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
         )
     )
     
