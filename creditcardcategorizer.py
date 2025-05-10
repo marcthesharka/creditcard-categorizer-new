@@ -281,7 +281,17 @@ def categorize_and_enhance_transaction(description):
     # Special case for card repayment
     if description.strip().upper() == 'AUTOMATIC PAYMENT - THANK YOU':
         return 'Card Repayment', 'Credit card bill payment'
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    
+    # Configure OpenAI client with explicit HTTP client settings
+    client = openai.OpenAI(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        base_url=os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1"),
+        http_client=openai.HttpxClient(
+            timeout=30.0,
+            limits=openai.HttpxLimits(max_keepalive_connections=5, max_connections=10)
+        )
+    )
+    
     prompt = (
         f"Given this credit card transaction description: '{description}',\n"
         "1. Categorize it with one of the following, do not create new categories: 'Food & Beverage', 'Health & Wellness', 'Travel (Taxi / Uber / Lyft / Revel)', 'Travel (Subway / MTA)', 'Gas & Fuel','Travel (Flights / Trains)', 'Hotel', 'Groceries', 'Entertainment', 'Shopping', 'Income / Refunds', 'Utilities (Electricity, Telecom, Internet)', 'Other (Miscellaneous)'.\n"
