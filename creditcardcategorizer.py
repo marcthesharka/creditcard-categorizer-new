@@ -10,6 +10,7 @@ import json
 import re
 from rq import Queue
 from redis import Redis
+from tasks import categorize_transactions
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a secure key in production
