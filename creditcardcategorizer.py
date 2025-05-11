@@ -9,9 +9,6 @@ import pickle
 import json
 import re
 from rq import Queue
-from redis import Redis
-from rq.job import Job
-from tasks import categorize_transactions
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a secure key in production
@@ -28,8 +25,7 @@ redis_url = (
 )
 if not redis_url:
     raise RuntimeError("No Redis URL found in environment variables! Please check your Heroku config vars.")
-redis_conn = Redis.from_url(redis_url)
-q = Queue(connection=redis_conn)
+conn = Redis.from_url(redis_url)
 
 def parse_pdf_transactions(pdf_path):
     import re
@@ -151,7 +147,7 @@ def index():
         log_file = f"/tmp/progress_{job_id}.log"
         output_file = f"/tmp/results_{job_id}.pkl"
         # Enqueue background job
-        job = q.enqueue(
+        job = Queue(name='default', connection=conn).enqueue(
             categorize_transactions,
             all_transactions,
             log_file,

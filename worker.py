@@ -1,7 +1,6 @@
 import os
 from redis import Redis
 from rq import Worker, Queue
-from rq.connections import Connection
 
 listen = ['default']
 redis_url = (
@@ -16,6 +15,5 @@ if not redis_url:
 conn = Redis.from_url(redis_url)
 
 if __name__ == '__main__':
-    with Connection(conn):
-        worker = Worker(list(map(Queue, listen)))
-        worker.work()
+    worker = Worker([Queue(name, connection=conn) for name in listen], connection=conn)
+    worker.work()
