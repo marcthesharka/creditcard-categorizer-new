@@ -1,5 +1,5 @@
 import os
-import redis
+from redis import Redis
 from rq import Worker, Queue, Connection
 
 listen = ['default']
@@ -12,7 +12,7 @@ redis_url = (
 )
 if not redis_url:
     raise RuntimeError("No Redis URL found in environment variables! Please check your Heroku config vars.")
-conn = redis.from_url(redis_url)
+conn = Redis.from_url(redis_url)
 
 if __name__ == '__main__':
     with Connection(conn):
