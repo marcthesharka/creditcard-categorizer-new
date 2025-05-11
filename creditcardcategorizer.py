@@ -155,8 +155,12 @@ def index():
         return render_template('progress.html', job_id=job.get_id())
     return render_template('index.html')
 
+@app.route('/progress')
 @app.route('/progress/<job_id>')
-def progress(job_id):
+def progress(job_id=None):
+    if not job_id:
+        return "No job ID provided"
+        
     try:
         redis_url = (
             os.environ.get("STACKHERO_REDIS_URL_TLS") or
@@ -187,6 +191,7 @@ def progress(job_id):
         return "Starting..."
         
     except Exception as e:
+        print(f"Error in progress endpoint: {str(e)}")  # Add logging
         return f"Error checking progress: {str(e)}"
 
 @app.route('/categorize/<job_id>')
