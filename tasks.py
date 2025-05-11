@@ -6,7 +6,8 @@ import re
 
 def categorize_transactions(transactions, log_file, output_file):
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    for t in transactions:
+    total = len(transactions)
+    for idx, t in enumerate(transactions, 1):
         try:
             # Your categorization logic here
             # Example:
@@ -22,12 +23,16 @@ def categorize_transactions(transactions, log_file, output_file):
             t['category'] = data.get("category", "Uncategorized")
             t['enhanced_description'] = data.get("enhanced_description", t['description'])
             with open(log_file, 'a') as logf:
-                logf.write(f"{t['description']}:\n{content}\n\n")
+                logf.write(f"{t['description']}:\n{content}\n")
+                logf.write(f"Processed {idx}/{total} transactions.\n\n")
         except Exception as e:
             with open(log_file, 'a') as logf:
-                logf.write(f"{t['description']}:\nOpenAI error: {e}\n\n")
+                logf.write(f"{t['description']}:\nOpenAI error: {e}\n")
+                logf.write(f"Processed {idx}/{total} transactions.\n\n")
             t['category'] = "Uncategorized"
             t['enhanced_description'] = t['description']
+    with open(log_file, 'a') as logf:
+        logf.write("All transactions categorized. You can now view results.\n")
     with open(output_file, 'wb') as tf:
         pickle.dump(transactions, tf)
     return output_file  # Path to the results file
