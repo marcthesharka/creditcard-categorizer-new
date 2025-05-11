@@ -157,18 +157,37 @@ def index():
 
 @app.route('/progress/<job_id>')
 def progress(job_id):
-    redis_url = (
-        os.environ.get("STACKHERO_REDIS_URL_TLS") or
-        os.environ.get("STACKHERO_REDIS_URL_CLEAR") or
-        os.environ.get("REDISGREEN_URL") or
-        os.environ.get("REDISCLOUD_URL") or
-        os.environ.get("MEMETRIA_REDIS_URL")
-    )
-    redis_conn = Redis.from_url(redis_url)
-    progress = redis_conn.get(f"progress:{job_id}")
-    if progress:
-        return progress.decode()
-    return "Starting..."
+    try:
+        redis_url = (
+            os.environ.get("STACKHERO_REDIS_URL_TLS") or
+            os.environ.get("STACKHERO_REDIS_URL_CLEAR") or
+            os.environ.get("REDISGREEN_URL") or
+            os.environ.get("REDISCLOUD_URL") or
+            os.environ.get("MEMETRIA_REDIS_URL")
+        )
+        if not redis_url:
+            return "Error: No Redis URL found in environment variables"
+            
+        redis_conn = Redis.from_url(redis_url)
+        progress = redis_conn.get(f"progress:{job_id}")
+        
+        if progress:
+            return progress.decode()
+            
+        # Check if job exists in queue
+        job = Queue(name='default', connection=redis_conn).fetch_job(job_id)
+        if job:
+            if job.is_finished:
+                return "Job completed. Processing results..."
+            elif job.is_failed:
+                return f"Job failed: {job.exc_info}"
+            else:
+                return "Job is running..."
+                
+        return "Starting..."
+        
+    except Exception as e:
+        return f"Error checking progress: {str(e)}"
 
 @app.route('/categorize/<job_id>')
 def categorize(job_id):
