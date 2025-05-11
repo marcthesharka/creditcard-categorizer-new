@@ -220,6 +220,8 @@ def categorize(job_id):
         with open(output_file, 'rb') as tf:
             print(f"DEBUG: Results loaded from file for job_id={job_id}")
             transactions = pickle.load(tf)
+    # Set session variable for export
+    session['transactions_file'] = output_file
     # Sort transactions by date descending
     transactions.sort(key=lambda t: t['date'], reverse=True)
     if request.method == 'POST':
@@ -361,8 +363,23 @@ def categorize_and_enhance_transaction(description):
             temperature=0.3
         )
         content = response.choices[0].message.content.strip()
-        print("OpenAI raw response:", content)
-        data = json.loads(content)
+        print("OpenAI raw response:", content)  # Log for debugging
+        # Try to extract JSON from the response
+        try:
+            data = json.loads(content)
+        except Exception as e:
+            print("JSON decode error:", e)
+            # Try to extract JSON substring if extra text is present
+            import re
+            match = re.search(r'\\{.*\\}', content, re.DOTALL)
+            if match:
+                try:
+                    data = json.loads(match.group(0))
+                except Exception as e2:
+                    print("Still failed to parse JSON:", e2)
+                    data = {}
+            else:
+                data = {}
         return data.get("category", "Uncategorized"), data.get("enhanced_description", description)
     except Exception as e:
         print(f"OpenAI error (combined): {e}")
