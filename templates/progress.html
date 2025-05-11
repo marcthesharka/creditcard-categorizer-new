@@ -8,7 +8,18 @@
                 .then(response => response.text())
                 .then(data => {
                     document.getElementById('terminal-content').textContent = data;
-                    setTimeout(pollProgress, 1000);
+                    // Auto-redirect when job is done
+                    if (
+                        data.includes("Job completed") ||
+                        data.includes("Categorization complete") ||
+                        data.includes("You can now view results")
+                    ) {
+                        setTimeout(function() {
+                            window.location.href = "/categorize/{{ job_id }}";
+                        }, 1500);
+                    } else {
+                        setTimeout(pollProgress, 1000);
+                    }
                 });
         }
         window.onload = pollProgress;
