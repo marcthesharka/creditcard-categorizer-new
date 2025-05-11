@@ -3,7 +3,7 @@ import redis
 from rq import Worker, Queue, Connection
 
 listen = ['default']
-redis_url = os.getenv('REDIS_URL')
+redis_url = os.environ.get("STACKHERO_REDIS_URL")  # or REDISGREEN_URL, etc.
 conn = redis.from_url(redis_url)
 
 if __name__ == '__main__':

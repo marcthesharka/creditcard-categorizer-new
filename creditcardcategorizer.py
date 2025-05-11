@@ -18,7 +18,9 @@ app.secret_key = 'your_secret_key'  # Replace with a secure key in production
 
 api_key = os.getenv("OPENAI_API_KEY")
 
-redis_conn = Redis.from_url(os.environ.get("REDIS_URL"))
+# Use the correct environment variable for your Redis add-on!
+redis_url = os.environ.get("STACKHERO_REDIS_URL")  # or REDISGREEN_URL, etc.
+redis_conn = Redis.from_url(redis_url)
 q = Queue(connection=redis_conn)
 
 def parse_pdf_transactions(pdf_path):
