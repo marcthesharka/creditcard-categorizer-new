@@ -69,9 +69,16 @@ def categorize_transactions(transactions, output_file, job_id):
                 update_progress(job_id, error_msg)
                 raise
         
-        # Save results
-        with open(output_file, 'wb') as f:
-            pickle.dump(categorized_transactions, f)
+        # Final progress update
+        redis_conn = get_redis_connection()
+        redis_conn.append(f"progress:{job_id}", "All transactions categorized. You can now view results.\n")
+        
+        # Save results to file (for local dev)
+        with open(output_file, 'wb') as tf:
+            pickle.dump(categorized_transactions, tf)
+        
+        # Save results to Redis (for Heroku)
+        redis_conn.set(f"results:{job_id}", pickle.dumps(categorized_transactions))
         
         update_progress(job_id, "Categorization complete!")
         print("Categorization complete!")  # Add logging

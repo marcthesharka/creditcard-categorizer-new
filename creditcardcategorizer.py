@@ -197,10 +197,26 @@ def progress(job_id=None):
 @app.route('/categorize/<job_id>')
 def categorize(job_id):
     output_file = f"/tmp/results_{job_id}.pkl"
-    if not os.path.exists(output_file):
-        return redirect(url_for('progress', job_id=job_id))
-    with open(output_file, 'rb') as tf:
-        transactions = pickle.load(tf)
+    redis_url = (
+        os.environ.get("STACKHERO_REDIS_URL_TLS") or
+        os.environ.get("STACKHERO_REDIS_URL_CLEAR") or
+        os.environ.get("REDISGREEN_URL") or
+        os.environ.get("REDISCLOUD_URL") or
+        os.environ.get("MEMETRIA_REDIS_URL")
+    )
+    redis_conn = Redis.from_url(redis_url) if redis_url else None
+    transactions = None
+    # Try to load from Redis first
+    if redis_conn:
+        results = redis_conn.get(f"results:{job_id}")
+        if results:
+            transactions = pickle.loads(results)
+    # Fallback to file (for local dev)
+    if transactions is None:
+        if not os.path.exists(output_file):
+            return redirect(url_for('progress', job_id=job_id))
+        with open(output_file, 'rb') as tf:
+            transactions = pickle.load(tf)
     # Sort transactions by date descending
     transactions.sort(key=lambda t: t['date'], reverse=True)
     if request.method == 'POST':
@@ -209,7 +225,6 @@ def categorize(job_id):
         with open(output_file, 'wb') as tf:
             pickle.dump(transactions, tf)
         return redirect(url_for('summary'))
-
     # Filter out repayment transactions for total spend calculation
     def is_repayment(txn):
         desc = txn['description'].strip().upper()
@@ -218,7 +233,6 @@ def categorize(job_id):
             desc.startswith('ACH DEPOSIT INTERNET TRANSFER')
         )
     filtered_transactions = [t for t in transactions if not is_repayment(t)]
-
     return render_template(
         'categorize.html',
         transactions=transactions,
