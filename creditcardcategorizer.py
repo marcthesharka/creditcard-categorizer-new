@@ -150,7 +150,7 @@ def index():
             categorize_transactions,
             all_transactions,
             output_file,
-            job_id=job_id
+            job_id
         )
         return render_template('progress.html', job_id=job.get_id())
     return render_template('index.html')
