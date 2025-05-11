@@ -144,15 +144,11 @@ def index():
                     transactions = parse_pdf_transactions(tmp.name)
                     os.unlink(tmp.name)
                 all_transactions.extend(transactions)
-        # Prepare unique log and output files per job
         job_id = os.urandom(8).hex()
-        log_file = f"/tmp/progress_{job_id}.log"
         output_file = f"/tmp/results_{job_id}.pkl"
-        # Enqueue background job
         job = Queue(name='default', connection=conn).enqueue(
             categorize_transactions,
             all_transactions,
-            log_file,
             output_file,
             job_id=job_id
         )
@@ -161,10 +157,17 @@ def index():
 
 @app.route('/progress/<job_id>')
 def progress(job_id):
-    log_file = f"/tmp/progress_{job_id}.log"
-    if os.path.exists(log_file):
-        with open(log_file, 'r') as f:
-            return f.read()
+    redis_url = (
+        os.environ.get("STACKHERO_REDIS_URL_TLS") or
+        os.environ.get("STACKHERO_REDIS_URL_CLEAR") or
+        os.environ.get("REDISGREEN_URL") or
+        os.environ.get("REDISCLOUD_URL") or
+        os.environ.get("MEMETRIA_REDIS_URL")
+    )
+    redis_conn = Redis.from_url(redis_url)
+    progress = redis_conn.get(f"progress:{job_id}")
+    if progress:
+        return progress.decode()
     return "Starting..."
 
 @app.route('/categorize/<job_id>')
