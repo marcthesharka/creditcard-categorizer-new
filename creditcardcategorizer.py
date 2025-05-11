@@ -364,7 +364,8 @@ def summary():
         min_date=min_date,
         max_date=max_date,
         bar_labels=bar_labels,
-        bar_datasets=bar_datasets
+        bar_datasets=bar_datasets,
+        job_id=job_id
     )
 
 def categorize_and_enhance_transaction(description):

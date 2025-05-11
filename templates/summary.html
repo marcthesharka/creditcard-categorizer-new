@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 </head>
 <body class="container mt-5">
-    <a href="{{ url_for('categorize') }}" class="btn btn-primary mb-3">Back to Categorized Transactions</a>
+    <a href="{{ url_for('categorize', job_id=job_id) }}" class="btn btn-primary mb-3">Back to Categorized Transactions</a>
     <div class="row">
         <div class="col-md-6 d-flex flex-column align-items-center">
             <h1 class="text-center w-100">Total CC Spend by Category</h1>
