@@ -156,11 +156,13 @@ def index():
     return render_template('index.html')
 
 @app.route('/progress')
+def progress_no_id():
+    return redirect(url_for('index'))
+
 @app.route('/progress/<job_id>')
 def progress(job_id=None):
     if not job_id:
         return "No job ID provided"
-        
     try:
         redis_url = (
             os.environ.get("STACKHERO_REDIS_URL_TLS") or
@@ -171,13 +173,10 @@ def progress(job_id=None):
         )
         if not redis_url:
             return "Error: No Redis URL found in environment variables"
-            
         redis_conn = Redis.from_url(redis_url)
         progress = redis_conn.get(f"progress:{job_id}")
-        
         if progress:
             return progress.decode()
-            
         # Check if job exists in queue
         job = Queue(name='default', connection=redis_conn).fetch_job(job_id)
         if job:
@@ -187,11 +186,9 @@ def progress(job_id=None):
                 return f"Job failed: {job.exc_info}"
             else:
                 return "Job is running..."
-                
         return "Starting..."
-        
     except Exception as e:
-        print(f"Error in progress endpoint: {str(e)}")  # Add logging
+        print(f"Error in progress endpoint: {str(e)}")
         return f"Error checking progress: {str(e)}"
 
 @app.route('/categorize/<job_id>')
@@ -210,12 +207,17 @@ def categorize(job_id):
     if redis_conn:
         results = redis_conn.get(f"results:{job_id}")
         if results:
+            print(f"DEBUG: Results found in Redis for job_id={job_id}")
             transactions = pickle.loads(results)
+        else:
+            print(f"DEBUG: No results found in Redis for job_id={job_id}")
     # Fallback to file (for local dev)
     if transactions is None:
         if not os.path.exists(output_file):
+            print(f"DEBUG: No results file found for job_id={job_id}")
             return redirect(url_for('progress', job_id=job_id))
         with open(output_file, 'rb') as tf:
+            print(f"DEBUG: Results loaded from file for job_id={job_id}")
             transactions = pickle.load(tf)
     # Sort transactions by date descending
     transactions.sort(key=lambda t: t['date'], reverse=True)
