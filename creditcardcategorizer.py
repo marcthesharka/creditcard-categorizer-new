@@ -19,7 +19,15 @@ app.secret_key = 'your_secret_key'  # Replace with a secure key in production
 api_key = os.getenv("OPENAI_API_KEY")
 
 # Use the correct environment variable for your Redis add-on!
-redis_url = os.environ.get("STACKHERO_REDIS_URL")  # or REDISGREEN_URL, etc.
+redis_url = (
+    os.environ.get("STACKHERO_REDIS_URL_TLS") or
+    os.environ.get("STACKHERO_REDIS_URL_CLEAR") or
+    os.environ.get("REDISGREEN_URL") or
+    os.environ.get("REDISCLOUD_URL") or
+    os.environ.get("MEMETRIA_REDIS_URL")
+)
+if not redis_url:
+    raise RuntimeError("No Redis URL found in environment variables! Please check your Heroku config vars.")
 redis_conn = Redis.from_url(redis_url)
 q = Queue(connection=redis_conn)
 
