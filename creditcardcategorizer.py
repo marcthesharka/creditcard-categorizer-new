@@ -1,5 +1,3 @@
-print("Starting app.py")
-
 import os
 import tempfile
 from flask import Flask, render_template, request, redirect, url_for, send_file, session
@@ -10,13 +8,18 @@ import openai
 import pickle
 import json
 import re
+from rq import Queue
+from redis import Redis
+from rq.job import Job
+from tasks import categorize_transactions
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a secure key in production
 
 api_key = os.getenv("OPENAI_API_KEY")
 
-LOG_FILE = os.path.join(tempfile.gettempdir(), 'openai_progress.log')
+redis_conn = Redis.from_url(os.environ.get("REDIS_URL"))
+q = Queue(connection=redis_conn)
 
 def parse_pdf_transactions(pdf_path):
     import re
@@ -124,8 +127,6 @@ def parse_apple_pdf_transactions(pdf_path):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        # Clear the log file at the start
-        open(LOG_FILE, 'w').close()
         files = request.files.getlist('pdf')
         all_transactions = []
         for file in files:
@@ -135,31 +136,42 @@ def index():
                     transactions = parse_pdf_transactions(tmp.name)
                     os.unlink(tmp.name)
                 all_transactions.extend(transactions)
-        # Auto-categorize using OpenAI
-        for t in all_transactions:
-            t['category'], t['enhanced_description'] = categorize_and_enhance_transaction(t['description'])
-        # Save to a temp file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pkl') as tf:
-            pickle.dump(all_transactions, tf)
-            temp_filename = tf.name
-        session['transactions_file'] = temp_filename
-        print(f"Total transactions parsed: {len(all_transactions)}")
-        return redirect(url_for('categorize'))
+        # Prepare unique log and output files per job
+        job_id = os.urandom(8).hex()
+        log_file = f"/tmp/progress_{job_id}.log"
+        output_file = f"/tmp/results_{job_id}.pkl"
+        # Enqueue background job
+        job = q.enqueue(
+            categorize_transactions,
+            all_transactions,
+            log_file,
+            output_file,
+            job_id=job_id
+        )
+        return render_template('progress.html', job_id=job.get_id())
     return render_template('index.html')
 
-@app.route('/categorize', methods=['GET', 'POST'])
-def categorize():
-    transactions_file = session.get('transactions_file')
-    if not transactions_file or not os.path.exists(transactions_file):
-        return redirect(url_for('index'))
-    with open(transactions_file, 'rb') as tf:
+@app.route('/progress/<job_id>')
+def progress(job_id):
+    log_file = f"/tmp/progress_{job_id}.log"
+    if os.path.exists(log_file):
+        with open(log_file, 'r') as f:
+            return f.read()
+    return "Starting..."
+
+@app.route('/categorize/<job_id>')
+def categorize(job_id):
+    output_file = f"/tmp/results_{job_id}.pkl"
+    if not os.path.exists(output_file):
+        return redirect(url_for('progress', job_id=job_id))
+    with open(output_file, 'rb') as tf:
         transactions = pickle.load(tf)
     # Sort transactions by date descending
     transactions.sort(key=lambda t: t['date'], reverse=True)
     if request.method == 'POST':
         for i, t in enumerate(transactions):
             t['category'] = request.form.get(f'category_{i}', '')
-        with open(transactions_file, 'wb') as tf:
+        with open(output_file, 'wb') as tf:
             pickle.dump(transactions, tf)
         return redirect(url_for('summary'))
 
@@ -298,26 +310,11 @@ def categorize_and_enhance_transaction(description):
         )
         content = response.choices[0].message.content.strip()
         print("OpenAI raw response:", content)
-        with open(LOG_FILE, 'a') as logf:
-            logf.write(f"{description}:\n{content}\n\n")
-        # Remove code block markers if present
-        if content.startswith("```"):
-            content = re.sub(r"^```[a-zA-Z]*\\n?", "", content)
-            content = content.rstrip("`").strip()
         data = json.loads(content)
         return data.get("category", "Uncategorized"), data.get("enhanced_description", description)
     except Exception as e:
-        with open(LOG_FILE, 'a') as logf:
-            logf.write(f"{description}:\nOpenAI error: {e}\n\n")
         print(f"OpenAI error (combined): {e}")
         return "Uncategorized", description
-
-@app.route('/progress')
-def progress():
-    if os.path.exists(LOG_FILE):
-        with open(LOG_FILE, 'r') as f:
-            return f.read()
-    return ""
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,1 +1,2 @@
-web: gunicorn creditcardcategorizer:app -c gunicorn.conf.py 
+web: gunicorn creditcardcategorizer:app
+worker: python worker.py 

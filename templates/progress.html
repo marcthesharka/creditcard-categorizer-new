@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Processing...</title>
+    <script>
+        function pollProgress() {
+            fetch('/progress/{{ job_id }}')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('terminal-content').textContent = data;
+                    setTimeout(pollProgress, 1000);
+                });
+        }
+        window.onload = pollProgress;
+    </script>
+</head>
+<body>
+    <h2>Parsing and categorizing transactions...</h2>
+    <pre id="terminal-content" style="background:#222; color:#fff; padding:10px; border-radius:5px; height:300px; overflow-y:auto;"></pre>
+    <p>When finished, <a href="/categorize/{{ job_id }}">view results</a></p>
+</body>
+</html>
