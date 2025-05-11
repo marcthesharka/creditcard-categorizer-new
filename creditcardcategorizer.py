@@ -220,8 +220,9 @@ def categorize(job_id):
         with open(output_file, 'rb') as tf:
             print(f"DEBUG: Results loaded from file for job_id={job_id}")
             transactions = pickle.load(tf)
-    # Set session variable for export
+    # Set session variable for export and summary
     session['transactions_file'] = output_file
+    session['job_id'] = job_id
     # Sort transactions by date descending
     transactions.sort(key=lambda t: t['date'], reverse=True)
     if request.method == 'POST':
@@ -247,22 +248,33 @@ def categorize(job_id):
 @app.route('/export')
 def export():
     transactions_file = session.get('transactions_file')
-    if not transactions_file or not os.path.exists(transactions_file):
-        return redirect(url_for('index'))
-    with open(transactions_file, 'rb') as tf:
-        transactions = pickle.load(tf)
+    job_id = session.get('job_id')
+    transactions = None
+    if transactions_file and os.path.exists(transactions_file):
+        with open(transactions_file, 'rb') as tf:
+            transactions = pickle.load(tf)
+    elif job_id:
+        redis_url = (
+            os.environ.get("STACKHERO_REDIS_URL_TLS") or
+            os.environ.get("STACKHERO_REDIS_URL_CLEAR") or
+            os.environ.get("REDISGREEN_URL") or
+            os.environ.get("REDISCLOUD_URL") or
+            os.environ.get("MEMETRIA_REDIS_URL")
+        )
+        redis_conn = Redis.from_url(redis_url) if redis_url else None
+        if redis_conn:
+            results = redis_conn.get(f"results:{job_id}")
+            if results:
+                transactions = pickle.loads(results)
     if not transactions:
         return redirect(url_for('index'))
     # Sort transactions by date descending
     transactions.sort(key=lambda t: t['date'], reverse=True)
     df = pd.DataFrame(transactions)
-    # Ensure all dates are timezone-unaware and format as 'Mon-YY'
     df['date'] = pd.to_datetime(df['date']).dt.tz_localize(None)
-    df['Month'] = df['date'].dt.strftime('%b-%y')  # e.g., 'Mar-25'
-    # Format amount as a number rounded to 2 decimals
+    df['Month'] = df['date'].dt.strftime('%b-%y')
     df['amount'] = df['amount'].apply(lambda x: round(float(x), 2))
     df['Amount'] = df['amount']
-    # Exclude repayment transactions from summary totals
     df = df[
         ~(
             df['description'].str.strip().str.upper().eq('AUTOMATIC PAYMENT - THANK YOU') |
@@ -270,7 +282,6 @@ def export():
         )
     ]
     sum_amount = df['amount'].sum()
-    # Append sum row
     sum_row = {
         'Month': '',
         'description': 'TOTAL (excluding payments)',
@@ -289,11 +300,26 @@ def export():
 @app.route('/summary')
 def summary():
     transactions_file = session.get('transactions_file')
-    if not transactions_file or not os.path.exists(transactions_file):
+    job_id = session.get('job_id')
+    transactions = None
+    if transactions_file and os.path.exists(transactions_file):
+        with open(transactions_file, 'rb') as tf:
+            transactions = pickle.load(tf)
+    elif job_id:
+        redis_url = (
+            os.environ.get("STACKHERO_REDIS_URL_TLS") or
+            os.environ.get("STACKHERO_REDIS_URL_CLEAR") or
+            os.environ.get("REDISGREEN_URL") or
+            os.environ.get("REDISCLOUD_URL") or
+            os.environ.get("MEMETRIA_REDIS_URL")
+        )
+        redis_conn = Redis.from_url(redis_url) if redis_url else None
+        if redis_conn:
+            results = redis_conn.get(f"results:{job_id}")
+            if results:
+                transactions = pickle.loads(results)
+    if not transactions:
         return redirect(url_for('index'))
-    with open(transactions_file, 'rb') as tf:
-        transactions = pickle.load(tf)
-    # Use the same repayment exclusion logic as categorize
     def is_repayment(txn):
         desc = txn['description'].strip().upper()
         return (
@@ -312,10 +338,8 @@ def summary():
         max_date = df['date'].max().strftime('%Y-%m-%d')
     else:
         min_date = max_date = ''
-    # Bar chart data: monthly spend by category
     if not df.empty:
         df['Month'] = pd.to_datetime(df['date']).dt.strftime('%b-%y')
-        # Sort months chronologically
         df['Month_dt'] = pd.to_datetime(df['date']).dt.to_period('M')
         pivot = df.pivot_table(index=['Month', 'Month_dt'], columns='category', values='amount', aggfunc='sum', fill_value=0)
         pivot = pivot.sort_index(level='Month_dt')
