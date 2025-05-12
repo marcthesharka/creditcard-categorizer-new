@@ -172,6 +172,9 @@ def parse_capitalone_pdf_transactions(pdf_path):
                             parsed_date = parsed_date.replace(year=year-1)
                         date_obj = datetime.combine(parsed_date, datetime.min.time())
                         amount = float(amount_str.replace(',', ''))
+                        # Exclude repayments: description contains 'CAPITAL ONE AUTOPAY'
+                        if 'CAPITAL ONE AUTOPAY' in desc.upper():
+                            continue
                         transactions.append({
                             'date': date_obj,
                             'description': desc.strip(),
