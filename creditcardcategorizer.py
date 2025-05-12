@@ -38,6 +38,8 @@ def parse_pdf_transactions(pdf_path):
             return parse_chase_pdf_transactions(pdf_path)
         elif "Apple Card" in first_page_text:
             return parse_apple_pdf_transactions(pdf_path)
+        elif "Capital One" in first_page_text:
+            return parse_capitalone_pdf_transactions(pdf_path)
         else:
             raise ValueError("Unknown statement format")
 
@@ -130,6 +132,57 @@ def parse_apple_pdf_transactions(pdf_path):
                         print(f"Error parsing Apple Card line: {line} -- {e}")
                         continue
     print(f"Total Apple Card transactions found: {len(transactions)}")
+    return transactions
+
+def parse_capitalone_pdf_transactions(pdf_path):
+    import re
+    from datetime import datetime, date
+    transactions = []
+    today = date.today()
+    in_transactions_section = False
+    with pdfplumber.open(pdf_path) as pdf:
+        for i, page in enumerate(pdf.pages[2:], start=3):  # skip first two pages
+            text = page.extract_text()
+            if not text:
+                continue
+            lines = text.splitlines()
+            for line in lines:
+                # Start parsing when we hit the Transactions section
+                if "Transactions" in line and not in_transactions_section:
+                    in_transactions_section = True
+                    continue
+                if not in_transactions_section:
+                    continue
+                # Stop if we hit Fees or Interest or end of transactions
+                if "Fees" in line or "Interest Charged" in line or "Total Transactions for This Period" in line:
+                    in_transactions_section = False
+                    break
+                # Skip headers and empty lines
+                if line.strip() == "" or "Trans Date" in line or "Description" in line or "Amount" in line or "Post Date" in line:
+                    continue
+                # Match lines like: Mar 14   H MARTNEW YORKNY   $8.33
+                match = re.match(r"^([A-Za-z]{3} \d{1,2})\s+(.+?)\s+\$?(-?[\d,]+\.\d{2})$", line)
+                if match:
+                    date_str, desc, amount_str = match.groups()
+                    try:
+                        # Parse date (assume current year, adjust if in future)
+                        year = today.year
+                        parsed_date = datetime.strptime(f"{date_str} {year}", "%b %d %Y").date()
+                        if parsed_date > today:
+                            parsed_date = parsed_date.replace(year=year-1)
+                        date_obj = datetime.combine(parsed_date, datetime.min.time())
+                        amount = float(amount_str.replace(',', ''))
+                        transactions.append({
+                            'date': date_obj,
+                            'description': desc.strip(),
+                            'amount': amount,
+                            'category': '',
+                            'card': 'Capital One'
+                        })
+                    except Exception as e:
+                        print(f"Error parsing Capital One line: {line} -- {e}")
+                        continue
+    print(f"Total Capital One transactions found: {len(transactions)}")
     return transactions
 
 @app.route('/', methods=['GET', 'POST'])
