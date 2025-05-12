@@ -1,6 +1,6 @@
 import os
 import tempfile
-from flask import Flask, render_template, request, redirect, url_for, send_file, session
+from flask import Flask, render_template, request, redirect, url_for, send_file, session, flash
 import pdfplumber
 import pandas as pd
 from datetime import datetime, date, timedelta
@@ -286,7 +286,10 @@ def categorize(job_id):
             t['category'] = request.form.get(f'category_{i}', '')
         with open(output_file, 'wb') as tf:
             pickle.dump(transactions, tf)
-        return redirect(url_for('summary'))
+        if redis_conn:
+            redis_conn.set(f"results:{job_id}", pickle.dumps(transactions))
+        flash('Changes saved!')
+        return redirect(url_for('categorize', job_id=job_id))
     # Filter out repayment transactions for total spend calculation
     def is_repayment(txn):
         desc = txn['description'].strip().upper()
