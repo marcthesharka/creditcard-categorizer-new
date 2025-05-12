@@ -248,7 +248,7 @@ def progress(job_id=None):
         print(f"Error in progress endpoint: {str(e)}")
         return f"Error checking progress: {str(e)}"
 
-@app.route('/categorize/<job_id>')
+@app.route('/categorize/<job_id>', methods=['GET', 'POST'])
 def categorize(job_id):
     output_file = f"/tmp/results_{job_id}.pkl"
     redis_url = (
