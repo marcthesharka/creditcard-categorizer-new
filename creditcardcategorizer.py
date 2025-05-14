@@ -486,7 +486,7 @@ def categorize_and_enhance_transaction(description):
 def create_payment_intent():
     data = request.get_json()
     num_pdfs = data.get('num_pdfs', 1)
-    amount = num_pdfs * 100  # $1 per PDF, in cents
+    amount = num_pdfs * 200  # $2 per PDF, in cents
     try:
         intent = stripe.PaymentIntent.create(
             amount=amount,

@@ -44,6 +44,7 @@
                 <tr>
                   <th>Date</th>
                   <th>Description</th>
+                  <th>Enhanced Description</th>
                   <th>Amount</th>
                   <th>Card</th>
                   <th>Category</th>
@@ -54,6 +55,7 @@
                 <tr>
                   <td>{{ t.date.strftime('%Y-%m-%d') }}</td>
                   <td>{{ t.description }}</td>
+                  <td>{{ t.enhanced_description }}</td>
                   <td>${{ '%.2f'|format(t.amount) }}</td>
                   <td>{{ t.card }}</td>
                   <td>
