@@ -517,13 +517,15 @@ def create_payment_intent():
     data = request.get_json()
     num_pdfs = data.get('num_pdfs', 1)
     amount = num_pdfs * 100  # $1 per PDF, in cents
-    intent = stripe.PaymentIntent.create(
-        amount=amount,
-        currency='usd',
-        payment_method_types=['card'],  # Explicitly set for robust compatibility
-        automatic_payment_methods={'enabled': True},
-    )
-    return jsonify({'clientSecret': intent.client_secret})
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=amount,
+            currency='usd',
+            automatic_payment_methods={'enabled': True},
+        )
+        return jsonify({'clientSecret': intent.client_secret})
+    except Exception as e:
+        return jsonify({'error': 'Payment setup failed. Please try again or use a different card.'}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -175,7 +175,10 @@
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({num_pdfs: numPdfs})
           })
-          .then(res => res.json())
+          .then(res => {
+            if (!res.ok) throw new Error('Payment setup failed. Please try again or use a different card.');
+            return res.json();
+          })
           .then(data => {
             paymentIntentSecret = data.clientSecret;
             // Payment Request Button
@@ -252,6 +255,10 @@
                 }
               });
             };
+          })
+          .catch(err => {
+            document.getElementById('payment-message').textContent = err.message;
+            document.getElementById('payment-form').style.display = 'block';
           });
         }
         // Only trigger payment flow on Parse & Categorize button
