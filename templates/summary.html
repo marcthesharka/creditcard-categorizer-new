@@ -10,21 +10,21 @@
         <h2 class="card-title mb-3"><i class="bi bi-bar-chart"></i> Spending Summary</h2>
         <p class="mb-2">Total spend: <strong>${{ '%.2f'|format(total_spend) }}</strong></p>
         <p class="mb-4 text-muted">Period: {{ min_date }} to {{ max_date }}</p>
-        <div class="mb-4" id="share-links">
-            <span>Share: </span>
-            <a href="https://www.instagram.com/categorizemyspend" target="_blank" title="Follow us on Instagram">
-                <i class="bi bi-instagram" style="font-size: 1.5rem; margin-right:8px;"></i>
+        <div class="mb-4 d-flex align-items-center gap-2" id="share-links">
+            <span class="me-2 fw-semibold">Share:</span>
+            <a href="https://www.instagram.com/categorizemyspend" target="_blank" title="Instagram" class="share-icon">
+                <i class="bi bi-instagram"></i>
             </a>
-            <a href="https://www.facebook.com/sharer/sharer.php?u=https://www.categorizemyspend.xyz" target="_blank" title="Share on Facebook">
-                <i class="bi bi-facebook" style="font-size: 1.5rem; margin-right:8px;"></i>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=https://www.categorizemyspend.xyz" target="_blank" title="Facebook" class="share-icon">
+                <i class="bi bi-facebook"></i>
             </a>
-            <a href="https://twitter.com/intent/tweet?url=https://www.categorizemyspend.xyz&text=Check%20out%20this%20awesome%20credit%20card%20transaction%20categorizer!%20It%20uses%20AI%20to%20automatically%20categorize%20your%20spending." target="_blank" title="Share on X">
-                <i class="bi bi-twitter-x" style="font-size: 1.5rem; margin-right:8px;"></i>
+            <a href="https://twitter.com/intent/tweet?url=https://www.categorizemyspend.xyz&text=Check%20out%20this%20awesome%20credit%20card%20transaction%20categorizer!%20It%20uses%20AI%20to%20automatically%20categorize%20your%20spending." target="_blank" title="X" class="share-icon">
+                <i class="bi bi-twitter-x"></i>
             </a>
-            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://www.categorizemyspend.xyz" target="_blank" title="Share on LinkedIn">
-                <i class="bi bi-linkedin" style="font-size: 1.5rem; margin-right:8px;"></i>
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://www.categorizemyspend.xyz" target="_blank" title="LinkedIn" class="share-icon">
+                <i class="bi bi-linkedin"></i>
             </a>
-            <button class="btn btn-outline-secondary btn-sm" onclick="copyLink()" style="vertical-align:middle;">Copy Link</button>
+            <button class="btn btn-outline-secondary btn-sm ms-2" onclick="copyLink()">Copy Link</button>
         </div>
         <canvas id="pieChart" width="300" height="150" class="mb-4"></canvas>
         <canvas id="barChart" width="400" height="200" class="mb-4"></canvas>
