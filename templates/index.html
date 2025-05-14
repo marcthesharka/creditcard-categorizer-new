@@ -56,14 +56,39 @@
             </a>
         </div>
         <h3 class="mt-4">Upload Credit Card Statements <small class="text-muted">(Up to 12, in PDF Format)</small></h3>
-        <form method="post" enctype="multipart/form-data" class="mb-3">
+        <form method="post" enctype="multipart/form-data" class="mb-3" id="upload-form">
             <div id="file-inputs">
                 <input type="file" name="pdf" accept="application/pdf" class="form-control mb-2" required>
             </div>
             <button type="button" class="btn btn-secondary mb-3" onclick="addInput()">Upload another statement</button>
             <br>
+            <input type="hidden" name="payment_complete" id="payment_complete" value="0">
             <button type="submit" class="btn btn-primary" id="parse-btn"><i class="bi bi-robot"></i> Parse & Categorize</button>
         </form>
+        <script src="https://js.stripe.com/v3/"></script>
+        <script>
+        const stripe = Stripe('pk_live_0W9dWXLLere1VUSm3FyRXyxp');
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
+            if (document.getElementById('payment_complete').value !== '1') {
+                e.preventDefault();
+                const numPdfs = document.querySelectorAll('input[type="file"][name="pdf"]').length;
+                fetch('/create-checkout-session', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({num_pdfs: numPdfs})
+                })
+                .then(res => res.json())
+                .then(data => {
+                    stripe.redirectToCheckout({ sessionId: data.url.split('/')[data.url.split('/').length-1] });
+                });
+            }
+        });
+        // Listen for redirect back from Stripe
+        if (window.location.pathname === '/success') {
+            document.getElementById('payment_complete').value = '1';
+            document.getElementById('upload-form').submit();
+        }
+        </script>
         <!-- Ad Space -->
         <div class="mt-4 mb-4">
             <ins class="adsbygoogle"

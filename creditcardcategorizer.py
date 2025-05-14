@@ -1,6 +1,6 @@
 import os
 import tempfile
-from flask import Flask, render_template, request, redirect, url_for, send_file, session, flash
+from flask import Flask, render_template, request, redirect, url_for, send_file, session, flash, jsonify
 import pdfplumber
 import pandas as pd
 from datetime import datetime, date, timedelta
@@ -11,11 +11,13 @@ import re
 from rq import Queue
 from redis import Redis
 from tasks import categorize_transactions
+import stripe
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a secure key in production
 
 api_key = os.getenv("OPENAI_API_KEY")
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 # Use the correct environment variable for your Redis add-on!
 redis_url = (
@@ -468,6 +470,36 @@ def categorize_and_enhance_transaction(description):
     except Exception as e:
         print(f"OpenAI error (combined): {e}")
         return "Uncategorized", description
+
+@app.route('/create-checkout-session', methods=['POST'])
+def create_checkout_session():
+    data = request.get_json()
+    num_pdfs = data.get('num_pdfs', 1)
+    session = stripe.checkout.Session.create(
+        payment_method_types=['card'],
+        line_items=[{
+            'price_data': {
+                'currency': 'usd',
+                'product_data': {
+                    'name': 'PDF Categorization',
+                },
+                'unit_amount': 100,  # $1.00 in cents
+            },
+            'quantity': num_pdfs,
+        }],
+        mode='payment',
+        success_url=url_for('success', _external=True),
+        cancel_url=url_for('cancel', _external=True),
+    )
+    return jsonify({'url': session.url})
+
+@app.route('/success')
+def success():
+    return render_template('success.html')
+
+@app.route('/cancel')
+def cancel():
+    return render_template('cancel.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
