@@ -58,9 +58,9 @@
         <h3 class="mt-4">Upload Credit Card Statements <small class="text-muted">(Up to 12, in PDF Format)</small></h3>
         <form method="post" enctype="multipart/form-data" class="mb-3" id="upload-form" autocomplete="off">
             <div id="file-inputs">
-                <input type="file" name="pdf" accept="application/pdf" class="form-control mb-2" required>
+                <input type="file" name="pdf" accept="application/pdf" class="form-control mb-2 file-upload" required>
             </div>
-            <button type="button" class="btn btn-secondary mb-3" onclick="addInput()">Upload another statement</button>
+            <button type="button" class="btn btn-secondary mb-3" id="add-statement-btn" onclick="addInput()">Upload another statement</button>
             <br>
             <input type="hidden" name="payment_complete" id="payment_complete" value="0">
             <button type="button" class="btn btn-primary" id="parse-btn"><i class="bi bi-robot"></i> Parse & Categorize</button>
@@ -68,20 +68,45 @@
         <!-- Stripe Elements Payment Form (hidden by default) -->
         <div id="payment-form" style="display:none; max-width:400px; margin:0 auto;">
           <div class="mb-2 fw-bold text-center">Amount to pay: $<span id="pay-amount"></span></div>
+          <div id="pay-method-label" class="text-center mb-2" style="font-size:1rem; font-weight:500;">Pay instantly with Apple Pay, Google Pay, or Link:</div>
           <div id="payment-request-button" style="margin-bottom: 1em;"></div>
           <form id="stripe-form" autocomplete="off">
             <div id="card-element" class="mb-2"></div>
-            <button id="pay-btn" class="btn btn-primary mt-2 w-100" type="submit">Pay</button>
+            <button id="pay-btn" class="btn btn-primary mt-2 w-100" type="submit">Pay Securely</button>
           </form>
+          <div class="text-center mt-2">
+            <img src="https://stripe.com/img/v3/home/social.png" alt="Powered by Stripe" style="height:28px; margin-top:8px;">
+            <div style="font-size:0.9em; color:#888;">Powered by Stripe</div>
+          </div>
           <div id="payment-message" class="mt-2 text-danger"></div>
         </div>
         <script src="https://js.stripe.com/v3/"></script>
         <script>
         const stripe = Stripe('pk_live_0W9dWXLLere1VUSm3FyRXyxp');
         let elements, card, paymentRequest, prButton, paymentIntentSecret;
+        let lastNumPdfs = 0;
+        function lockFileInputs(lock) {
+          const fileInputs = document.querySelectorAll('.file-upload');
+          fileInputs.forEach(input => input.disabled = lock);
+          document.getElementById('add-statement-btn').disabled = lock;
+        }
+        function resetPaymentIfFilesChanged() {
+          document.getElementById('payment_complete').value = '0';
+          document.getElementById('payment-form').style.display = 'none';
+        }
+        // Watch for file input changes to reset payment
+        document.getElementById('file-inputs').addEventListener('change', function() {
+          resetPaymentIfFilesChanged();
+        });
+        // Also reset if user adds another statement
+        document.getElementById('add-statement-btn').addEventListener('click', function() {
+          resetPaymentIfFilesChanged();
+        });
         function showPaymentForm(numPdfs) {
           document.getElementById('payment-form').style.display = 'block';
           document.getElementById('pay-amount').textContent = numPdfs;
+          lastNumPdfs = numPdfs;
+          lockFileInputs(true);
           // Only create Elements once
           if (!elements) {
             elements = stripe.elements();
@@ -116,8 +141,10 @@
                 if (result) {
                   prButton.mount('#payment-request-button');
                   document.getElementById('payment-request-button').style.display = 'block';
+                  document.getElementById('pay-method-label').style.display = 'block';
                 } else {
                   document.getElementById('payment-request-button').style.display = 'none';
+                  document.getElementById('pay-method-label').style.display = 'none';
                 }
               });
               paymentRequest.on('paymentmethod', function(ev) {
@@ -173,7 +200,7 @@
         // Only trigger payment flow on Parse & Categorize button
         document.getElementById('parse-btn').addEventListener('click', function(e) {
           e.preventDefault();
-          const numPdfs = document.querySelectorAll('input[type="file"][name="pdf"]').length;
+          const numPdfs = document.querySelectorAll('input[type="file"][name="pdf"]:not([disabled])').length;
           showPaymentForm(numPdfs);
         });
         // Prevent form submit if payment not complete
@@ -181,6 +208,14 @@
           if (document.getElementById('payment_complete').value !== '1') {
             e.preventDefault();
             return false;
+          }
+        });
+        // If payment form is closed/cancelled, unlock file inputs
+        // (Assume user can close by clicking outside or pressing Esc)
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            document.getElementById('payment-form').style.display = 'none';
+            lockFileInputs(false);
           }
         });
         </script>
