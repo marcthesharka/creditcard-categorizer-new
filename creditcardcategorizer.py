@@ -193,25 +193,36 @@ def parse_capitalone_pdf_transactions(pdf_path):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
+        # Check payment
+        if request.form.get('payment_complete') != '1':
+            flash('There was an error processing your payment. We did not charge you. Please try again or use a different card.', 'danger')
+            return render_template('index.html')
         files = request.files.getlist('pdf')
+        if not files or not any(f.filename for f in files):
+            flash('Please upload at least one PDF.', 'danger')
+            return render_template('index.html')
         all_transactions = []
-        for file in files:
-            if file and file.filename.endswith('.pdf'):
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
-                    file.save(tmp.name)
-                    transactions = parse_pdf_transactions(tmp.name)
-                    os.unlink(tmp.name)
-                all_transactions.extend(transactions)
-        job_id = os.urandom(8).hex()
-        output_file = f"/tmp/results_{job_id}.pkl"
-        job = Queue(name='default', connection=conn).enqueue(
-            categorize_transactions,
-            all_transactions,
-            output_file,
-            job_id,
-            job_id=job_id
-        )
-        return render_template('progress.html', job_id=job.get_id())
+        try:
+            for file in files:
+                if file and file.filename.endswith('.pdf'):
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+                        file.save(tmp.name)
+                        transactions = parse_pdf_transactions(tmp.name)
+                        os.unlink(tmp.name)
+                    all_transactions.extend(transactions)
+            job_id = os.urandom(8).hex()
+            output_file = f"/tmp/results_{job_id}.pkl"
+            job = Queue(name='default', connection=conn).enqueue(
+                categorize_transactions,
+                all_transactions,
+                output_file,
+                job_id,
+                job_id=job_id
+            )
+            return render_template('progress.html', job_id=job.get_id())
+        except Exception as e:
+            flash('There was an error processing your file(s). Your payment was not captured. If you see a pending charge, it will be automatically voided by your bank.', 'danger')
+            return render_template('index.html')
     return render_template('index.html')
 
 @app.route('/progress')
@@ -509,6 +520,7 @@ def create_payment_intent():
     intent = stripe.PaymentIntent.create(
         amount=amount,
         currency='usd',
+        payment_method_types=['card'],  # Explicitly set for robust compatibility
         automatic_payment_methods={'enabled': True},
     )
     return jsonify({'clientSecret': intent.client_secret})
