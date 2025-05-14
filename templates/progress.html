@@ -28,40 +28,48 @@
 {% endblock %}
 
 {% block content %}
-    <h2>Parsing and categorizing transactions...</h2>
-    <div class="mb-3" id="share-links">
-        <span>Share: </span>
-        <a href="https://www.instagram.com/categorizemyspend" target="_blank" title="Follow us on Instagram">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/instagram.svg" alt="Instagram" style="width:24px; height:24px; margin-right:8px; vertical-align:middle;">
-        </a>
-        <a href="https://www.facebook.com/sharer/sharer.php?u=https://www.categorizemyspend.xyz" target="_blank" title="Share on Facebook">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/facebook.svg" alt="Facebook" style="width:24px; height:24px; margin-right:8px; vertical-align:middle;">
-        </a>
-        <a href="https://twitter.com/intent/tweet?url=https://www.categorizemyspend.xyz&text=Check%20out%20this%20awesome%20credit%20card%20transaction%20categorizer!%20It%20uses%20AI%20to%20automatically%20categorize%20your%20spending." target="_blank" title="Share on X">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/x.svg" alt="X" style="width:24px; height:24px; margin-right:8px; vertical-align:middle;">
-        </a>
-        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://www.categorizemyspend.xyz" target="_blank" title="Share on LinkedIn">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/linkedin.svg" alt="LinkedIn" style="width:24px; height:24px; margin-right:8px; vertical-align:middle;">
-        </a>
-        <button class="btn btn-outline-secondary btn-sm" onclick="copyLink()" style="vertical-align:middle;">Copy Link</button>
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card p-4 mb-4">
+      <div class="card-body">
+        <h2 class="card-title mb-3"><i class="bi bi-cpu"></i> Parsing and Categorizing Transactions...</h2>
+        <div class="mb-3" id="share-links">
+            <span>Share: </span>
+            <a href="https://www.instagram.com/categorizemyspend" target="_blank" title="Follow us on Instagram">
+                <i class="bi bi-instagram" style="font-size: 1.5rem; margin-right:8px;"></i>
+            </a>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=https://www.categorizemyspend.xyz" target="_blank" title="Share on Facebook">
+                <i class="bi bi-facebook" style="font-size: 1.5rem; margin-right:8px;"></i>
+            </a>
+            <a href="https://twitter.com/intent/tweet?url=https://www.categorizemyspend.xyz&text=Check%20out%20this%20awesome%20credit%20card%20transaction%20categorizer!%20It%20uses%20AI%20to%20automatically%20categorize%20your%20spending." target="_blank" title="Share on X">
+                <i class="bi bi-twitter-x" style="font-size: 1.5rem; margin-right:8px;"></i>
+            </a>
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://www.categorizemyspend.xyz" target="_blank" title="Share on LinkedIn">
+                <i class="bi bi-linkedin" style="font-size: 1.5rem; margin-right:8px;"></i>
+            </a>
+            <button class="btn btn-outline-secondary btn-sm" onclick="copyLink()" style="vertical-align:middle;">Copy Link</button>
+        </div>
+        <div id="terminal-window" style="background:#222; color:rgb(255,255,255); font-family:monospace; padding:10px; margin-top:20px; height:200px; overflow-y:auto; border-radius:5px;">
+            <span>Parsing and categorizing transactions...</span>
+            <pre id="terminal-content"></pre>
+        </div>
+        <!-- Progress Page Bottom Ad -->
+        <div class="mt-4 mb-4">
+            <ins class="adsbygoogle"
+                 style="display:block"
+                 data-ad-client="ca-pub-2241745683809563"
+                 data-ad-slot="2497046069"
+                 data-ad-format="auto"
+                 data-full-width-responsive="true"></ins>
+            <script>
+                 (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
+        </div>
+        <p class="mt-3">When finished, <a href="/categorize/{{ job_id }}">view results</a></p>
+      </div>
     </div>
-    <div id="terminal-window" style="background:#222; color:rgb(255,255,255); font-family:monospace; padding:10px; margin-top:20px; height:200px; overflow-y:auto; border-radius:5px;">
-        <span>Parsing and categorizing transactions...</span>
-        <pre id="terminal-content"></pre>
-    </div>
-    <!-- Progress Page Bottom Ad -->
-    <div class="mt-4 mb-4">
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-2241745683809563"
-             data-ad-slot="2497046069"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>
-             (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
-    </div>
-    <p>When finished, <a href="/categorize/{{ job_id }}">view results</a></p>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

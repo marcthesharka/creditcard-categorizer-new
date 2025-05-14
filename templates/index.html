@@ -18,58 +18,64 @@
 {% endblock %}
 
 {% block content %}
-    <h1 class="mb-3">Credit Card Transaction Categorizer</h1>
-    <div class="mb-4" id="app-description"><strong>Ever wondered how much you're spending on your credit card(s) and on what?</strong></div>
-    <div class="mb-4" id="app-description">This app uses OpenAI's latest GPT-4o model to intelligently categorize your raw credit card transactions across all your cards for multiple months</div>
-    <ul>
-        <li>Upload your monthly credit card statements from Chase, Apple Card, and/or Capital One in PDF format (limit of 12 at a time).</li>
-        <li>See your transactions being categorized in real-time in the terminal and give it some time to categorize intelligently.</li>
-        <li>We can parse U.S.-based Chase, Apple Card, Capital One credit card statements at the moment.</li>
-    </ul>
-    <div class="mb-4" id="app-description">Our app is free - we monetize on the ads you see on the page. We do not store your data (files are deleted after usage).</div>
-    <div class="mb-4" id="app-description">The app was fully built using an AI agent - our primary goal is to demonstrate a usecase for how AI can automate mundane tasks.</div>
-    <div class="mb-4" id="share-links">
-        <span>Share: </span>
-        <a href="https://www.instagram.com/categorizemyspend" target="_blank" title="Follow us on Instagram">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/instagram.svg" alt="Instagram" style="width:24px; height:24px; margin-right:8px; vertical-align:middle;">
-        </a>
-        <a href="https://www.facebook.com/sharer/sharer.php?u=https://www.categorizemyspend.xyz" target="_blank" title="Share on Facebook">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/facebook.svg" alt="Facebook" style="width:24px; height:24px; margin-right:8px; vertical-align:middle;">
-        </a>
-        <a href="https://twitter.com/intent/tweet?url=https://www.categorizemyspend.xyz&text=Check%20out%20this%20awesome%20credit%20card%20transaction%20categorizer!%20It%20uses%20AI%20to%20automatically%20categorize%20your%20spending." target="_blank" title="Share on X">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/x.svg" alt="X" style="width:24px; height:24px; margin-right:8px; vertical-align:middle;">
-        </a>
-        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://www.categorizemyspend.xyz" target="_blank" title="Share on LinkedIn">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/linkedin.svg" alt="LinkedIn" style="width:24px; height:24px; margin-right:8px; vertical-align:middle;">
-        </a>
-        <button class="btn btn-outline-secondary btn-sm" onclick="copyLink()" style="vertical-align:middle;">Copy Link</button>
-    </div>
-    <h3>Upload Credit Card Statements (Up to 12, in PDF Format)</h3>
-    <form method="post" enctype="multipart/form-data">
-        <div id="file-inputs">
-            <input type="file" name="pdf" accept="application/pdf" class="form-control mb-2" required>
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card p-4 mb-4">
+      <div class="card-body">
+        <h1 class="card-title mb-3"><i class="bi bi-credit-card"></i> Credit Card Transaction Categorizer</h1>
+        <p class="lead">Ever wondered how much you're spending on your credit card(s) and on what?</p>
+        <ul class="list-unstyled mb-4">
+          <li><i class="bi bi-check-circle text-success"></i> Upload your monthly credit card statements (PDF)</li>
+          <li><i class="bi bi-check-circle text-success"></i> See your transactions categorized in real-time</li>
+          <li><i class="bi bi-check-circle text-success"></i> Supports Chase, Apple Card, and Capital One</li>
+        </ul>
+        <div class="mb-4" id="app-description">Our app is free - we monetize on the ads you see on the page. We do not store your data (files are deleted after usage).</div>
+        <div class="mb-4" id="app-description">The app was fully built using an AI agent - our primary goal is to demonstrate a usecase for how AI can automate mundane tasks.</div>
+        <div class="mb-4" id="share-links">
+            <span>Share: </span>
+            <a href="https://www.instagram.com/categorizemyspend" target="_blank" title="Follow us on Instagram">
+                <i class="bi bi-instagram" style="font-size: 1.5rem; margin-right:8px;"></i>
+            </a>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=https://www.categorizemyspend.xyz" target="_blank" title="Share on Facebook">
+                <i class="bi bi-facebook" style="font-size: 1.5rem; margin-right:8px;"></i>
+            </a>
+            <a href="https://twitter.com/intent/tweet?url=https://www.categorizemyspend.xyz&text=Check%20out%20this%20awesome%20credit%20card%20transaction%20categorizer!%20It%20uses%20AI%20to%20automatically%20categorize%20your%20spending." target="_blank" title="Share on X">
+                <i class="bi bi-twitter-x" style="font-size: 1.5rem; margin-right:8px;"></i>
+            </a>
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://www.categorizemyspend.xyz" target="_blank" title="Share on LinkedIn">
+                <i class="bi bi-linkedin" style="font-size: 1.5rem; margin-right:8px;"></i>
+            </a>
+            <button class="btn btn-outline-secondary btn-sm" onclick="copyLink()" style="vertical-align:middle;">Copy Link</button>
         </div>
-        <button type="button" class="btn btn-secondary mb-3" onclick="addInput()">Upload another statement</button>
-        <br>
-        <button type="submit" class="btn btn-primary" id="parse-btn">Parse & Categorize</button>
-    </form>
-    <!-- Ad Space -->
-    <div class="mt-4 mb-4">
-        <!-- Categorize My Spend App -->
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-2241745683809563"
-             data-ad-slot="3638721437"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>
-             (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
+        <h3 class="mt-4">Upload Credit Card Statements <small class="text-muted">(Up to 12, in PDF Format)</small></h3>
+        <form method="post" enctype="multipart/form-data" class="mb-3">
+            <div id="file-inputs">
+                <input type="file" name="pdf" accept="application/pdf" class="form-control mb-2" required>
+            </div>
+            <button type="button" class="btn btn-secondary mb-3" onclick="addInput()">Upload another statement</button>
+            <br>
+            <button type="submit" class="btn btn-primary" id="parse-btn"><i class="bi bi-robot"></i> Parse & Categorize</button>
+        </form>
+        <!-- Ad Space -->
+        <div class="mt-4 mb-4">
+            <ins class="adsbygoogle"
+                 style="display:block"
+                 data-ad-client="ca-pub-2241745683809563"
+                 data-ad-slot="3638721437"
+                 data-ad-format="auto"
+                 data-full-width-responsive="true"></ins>
+            <script>
+                 (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
+        </div>
+        <div id="terminal-window" style="display:none; background:#222; color:rgb(255, 255, 255); font-family:monospace; padding:10px; margin-top:20px; height:200px; overflow-y:auto; border-radius:5px;">
+            <span>Parsing and categorizing transactions...</span>
+            <pre id="terminal-content"></pre>
+        </div>
+      </div>
     </div>
-    <div id="terminal-window" style="display:none; background:#222; color:rgb(255, 255, 255); font-family:monospace; padding:10px; margin-top:20px; height:200px; overflow-y:auto; border-radius:5px;">
-        <span>Parsing and categorizing transactions...</span>
-        <pre id="terminal-content"></pre>
-    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

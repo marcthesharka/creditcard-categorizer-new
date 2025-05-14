@@ -1,74 +1,80 @@
 {% extends "base.html" %}
 
-{% block title %}Categorized Transactions Output{% endblock %}
+{% block title %}Categorize Transactions{% endblock %}
 
 {% block content %}
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <div class="alert alert-success" role="alert" style="margin-top: 10px;">
-                {{ messages[0] }}
-            </div>
-        {% endif %}
-    {% endwith %}
-    <h1>Categorized Transactions Output</h1>
-    <div class="mb-3" id="share-links">
-        <span>Share: </span>
-        <a href="https://www.instagram.com/categorizemyspend" target="_blank" title="Follow us on Instagram">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/instagram.svg" alt="Instagram" style="width:24px; height:24px; margin-right:8px; vertical-align:middle;">
-        </a>
-        <a href="https://www.facebook.com/sharer/sharer.php?u=https://www.categorizemyspend.xyz" target="_blank" title="Share on Facebook">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/facebook.svg" alt="Facebook" style="width:24px; height:24px; margin-right:8px; vertical-align:middle;">
-        </a>
-        <a href="https://twitter.com/intent/tweet?url=https://www.categorizemyspend.xyz&text=Check%20out%20this%20awesome%20credit%20card%20transaction%20categorizer!%20It%20uses%20AI%20to%20automatically%20categorize%20your%20spending." target="_blank" title="Share on X">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/x.svg" alt="X" style="width:24px; height:24px; margin-right:8px; vertical-align:middle;">
-        </a>
-        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://www.categorizemyspend.xyz" target="_blank" title="Share on LinkedIn">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/linkedin.svg" alt="LinkedIn" style="width:24px; height:24px; margin-right:8px; vertical-align:middle;">
-        </a>
-        <button class="btn btn-outline-secondary btn-sm" onclick="copyLink()" style="vertical-align:middle;">Copy Link</button>
-    </div>
-    <form method="post">
-        <div class="mb-3 d-flex align-items-center justify-content-between">
-            <div>
-                <a href="{{ url_for('summary') }}" class="btn btn-primary">View Spending Summary</a>
-                <a href="{{ url_for('export') }}" class="btn btn-success">Export to Excel</a>
-            </div>
-            <button type="submit" class="btn btn-primary">Save Changes</button>
+<div class="row justify-content-center">
+  <div class="col-md-10 col-lg-9">
+    <div class="card p-4 mb-4">
+      <div class="card-body">
+        <h2 class="card-title mb-3"><i class="bi bi-pencil-square"></i> Categorize Transactions</h2>
+        <div class="mb-4" id="share-links">
+            <span>Share: </span>
+            <a href="https://www.instagram.com/categorizemyspend" target="_blank" title="Follow us on Instagram">
+                <i class="bi bi-instagram" style="font-size: 1.5rem; margin-right:8px;"></i>
+            </a>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=https://www.categorizemyspend.xyz" target="_blank" title="Share on Facebook">
+                <i class="bi bi-facebook" style="font-size: 1.5rem; margin-right:8px;"></i>
+            </a>
+            <a href="https://twitter.com/intent/tweet?url=https://www.categorizemyspend.xyz&text=Check%20out%20this%20awesome%20credit%20card%20transaction%20categorizer!%20It%20uses%20AI%20to%20automatically%20categorize%20your%20spending." target="_blank" title="Share on X">
+                <i class="bi bi-twitter-x" style="font-size: 1.5rem; margin-right:8px;"></i>
+            </a>
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://www.categorizemyspend.xyz" target="_blank" title="Share on LinkedIn">
+                <i class="bi bi-linkedin" style="font-size: 1.5rem; margin-right:8px;"></i>
+            </a>
+            <button class="btn btn-outline-secondary btn-sm" onclick="copyLink()" style="vertical-align:middle;">Copy Link</button>
         </div>
-        {% set min_date = transactions|map(attribute='date')|min %}
-        {% set max_date = transactions|map(attribute='date')|max %}
-        {% set total_spend = filtered_transactions|map(attribute='amount')|sum %}
-        <div class="alert alert-secondary text-center" role="alert">
-            <strong>Total Spend from {{ min_date.strftime('%Y-%m-%d') }} to {{ max_date.strftime('%Y-%m-%d') }}:</strong>
-            ${{ '%.2f' % total_spend }}
-        </div>
-        <table class="table table-bordered">
-            <thead>
+        <form method="post">
+          <div class="table-responsive">
+            <table class="table table-striped table-bordered align-middle">
+              <thead class="table-light">
                 <tr>
-                    <th>Date</th>
-                    <th>Card</th>
-                    <th>Raw Txn Description</th>
-                    <th>Enhanced Txn Description</th>
-                    <th>Amount</th>
-                    <th>Category</th>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Amount</th>
+                  <th>Card</th>
+                  <th>Category</th>
                 </tr>
-            </thead>
-            <tbody>
-                {% for t in transactions %}
+              </thead>
+              <tbody>
+                {% for i, t in enumerate(transactions) %}
                 <tr>
-                    <td>{{ t.date.strftime('%Y-%m-%d') }}</td>
-                    <td>{{ t.card }}</td>
-                    <td>{{ t.description }}</td>
-                    <td>{{ t.enhanced_description }}</td>
-                    <td>{{ t.amount }}</td>
-                    <td>
-                        <input type="text" name="category_{{ loop.index0 }}" value="{{ t.category }}" class="form-control">
-                    </td>
+                  <td>{{ t.date.strftime('%Y-%m-%d') }}</td>
+                  <td>{{ t.description }}</td>
+                  <td>${{ '%.2f'|format(t.amount) }}</td>
+                  <td>{{ t.card }}</td>
+                  <td>
+                    <select name="category_{{ i }}" class="form-select form-select-sm">
+                      <option value="">Uncategorized</option>
+                      <option value="Food & Beverage" {% if t.category == 'Food & Beverage' %}selected{% endif %}>Food & Beverage</option>
+                      <option value="Health & Wellness" {% if t.category == 'Health & Wellness' %}selected{% endif %}>Health & Wellness</option>
+                      <option value="Travel (Taxi / Uber / Lyft / Revel)" {% if t.category == 'Travel (Taxi / Uber / Lyft / Revel)' %}selected{% endif %}>Travel (Taxi / Uber / Lyft / Revel)</option>
+                      <option value="Travel (Subway / MTA)" {% if t.category == 'Travel (Subway / MTA)' %}selected{% endif %}>Travel (Subway / MTA)</option>
+                      <option value="Gas & Fuel" {% if t.category == 'Gas & Fuel' %}selected{% endif %}>Gas & Fuel</option>
+                      <option value="Travel (Flights / Trains)" {% if t.category == 'Travel (Flights / Trains)' %}selected{% endif %}>Travel (Flights / Trains)</option>
+                      <option value="Hotel" {% if t.category == 'Hotel' %}selected{% endif %}>Hotel</option>
+                      <option value="Groceries" {% if t.category == 'Groceries' %}selected{% endif %}>Groceries</option>
+                      <option value="Entertainment / Leisure Activities" {% if t.category == 'Entertainment / Leisure Activities' %}selected{% endif %}>Entertainment / Leisure Activities</option>
+                      <option value="Shopping" {% if t.category == 'Shopping' %}selected{% endif %}>Shopping</option>
+                      <option value="Income / Refunds" {% if t.category == 'Income / Refunds' %}selected{% endif %}>Income / Refunds</option>
+                      <option value="Utilities (Electricity, Telecom, Internet)" {% if t.category == 'Utilities (Electricity, Telecom, Internet)' %}selected{% endif %}>Utilities (Electricity, Telecom, Internet)</option>
+                      <option value="Other (Miscellaneous)" {% if t.category == 'Other (Miscellaneous)' %}selected{% endif %}>Other (Miscellaneous)</option>
+                    </select>
+                  </td>
                 </tr>
                 {% endfor %}
-            </tbody>
-        </table>
-    </form>
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-3">
+            <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> Save Changes</button>
+            <a href="/summary" class="btn btn-outline-primary ms-2"><i class="bi bi-bar-chart"></i> View Summary</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
