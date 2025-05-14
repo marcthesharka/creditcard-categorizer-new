@@ -6,14 +6,29 @@
 <script>
     function addInput() {
         const container = document.getElementById('file-inputs');
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.name = 'pdf';
-        input.accept = 'application/pdf';
-        input.className = 'form-control mb-2';
-        input.required = true;
-        container.appendChild(input);
+        const div = document.createElement('div');
+        div.className = 'file-input-row position-relative mb-2';
+        div.innerHTML = `<input type="file" name="pdf" accept="application/pdf" class="form-control file-upload" required>
+          <button type="button" class="remove-file-btn btn btn-link p-0 position-absolute top-50 end-0 translate-middle-y" style="right:8px; color:#dc3545; font-size:1.2em; display:none;" title="Remove"><i class="bi bi-x-circle-fill"></i></button>`;
+        container.appendChild(div);
+        updateRemoveButtons();
     }
+    function updateRemoveButtons() {
+        const rows = document.querySelectorAll('.file-input-row');
+        rows.forEach((row, idx) => {
+            const btn = row.querySelector('.remove-file-btn');
+            if (btn) btn.style.display = (rows.length > 1) ? 'inline' : 'none';
+        });
+    }
+    // Delegate remove button click
+    document.getElementById('file-inputs').addEventListener('click', function(e) {
+        if (e.target.closest('.remove-file-btn')) {
+            const row = e.target.closest('.file-input-row');
+            if (row) row.remove();
+            updateRemoveButtons();
+            resetPaymentIfFilesChanged();
+        }
+    });
 </script>
 {% endblock %}
 
@@ -58,7 +73,9 @@
         <h3 class="mt-4">Upload Credit Card Statements <small class="text-muted">(Up to 12, in PDF Format)</small></h3>
         <form method="post" enctype="multipart/form-data" class="mb-3" id="upload-form" autocomplete="off">
             <div id="file-inputs">
-                <input type="file" name="pdf" accept="application/pdf" class="form-control mb-2 file-upload" required>
+                <div class="file-input-row position-relative mb-2">
+                  <input type="file" name="pdf" accept="application/pdf" class="form-control file-upload" required>
+                </div>
             </div>
             <button type="button" class="btn btn-secondary mb-3" id="add-statement-btn" onclick="addInput()">Upload another statement</button>
             <br>
@@ -74,9 +91,9 @@
             <div id="card-element" class="mb-2"></div>
             <button id="pay-btn" class="btn btn-primary mt-2 w-100" type="submit">Pay Securely</button>
           </form>
-          <div class="text-center mt-2">
+          <div class="d-flex justify-content-end align-items-center mt-2">
             <img src="https://stripe.com/img/v3/home/social.png" alt="Powered by Stripe" style="height:28px; margin-top:8px;">
-            <div style="font-size:0.9em; color:#888;">Powered by Stripe</div>
+            <div style="font-size:0.9em; color:#888; margin-left:8px;">Powered by Stripe</div>
           </div>
           <div id="payment-message" class="mt-2 text-danger"></div>
         </div>
@@ -218,6 +235,8 @@
             lockFileInputs(false);
           }
         });
+        // On page load, ensure remove button is correct
+        updateRemoveButtons();
         </script>
         <!-- Ad Space -->
         <div class="mt-4 mb-4">
