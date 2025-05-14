@@ -103,11 +103,6 @@
         const stripe = Stripe('pk_live_0W9dWXLLere1VUSm3FyRXyxp');
         let elements, card, paymentRequest, prButton, paymentIntentSecret;
         let lastNumPdfs = 0;
-        function lockFileInputs(lock) {
-          const fileInputs = document.querySelectorAll('.file-upload');
-          fileInputs.forEach(input => input.disabled = lock);
-          document.getElementById('add-statement-btn').disabled = lock;
-        }
         function resetPaymentIfFilesChanged() {
           document.getElementById('payment_complete').value = '0';
           document.getElementById('payment-form').style.display = 'none';
@@ -124,7 +119,6 @@
           document.getElementById('payment-form').style.display = 'block';
           document.getElementById('pay-amount').textContent = numPdfs;
           lastNumPdfs = numPdfs;
-          lockFileInputs(true);
           // Only create Elements once
           if (!elements) {
             elements = stripe.elements();
@@ -233,7 +227,7 @@
         document.addEventListener('keydown', function(e) {
           if (e.key === 'Escape') {
             document.getElementById('payment-form').style.display = 'none';
-            lockFileInputs(false);
+            resetPaymentIfFilesChanged();
           }
         });
         // On page load, ensure remove button is correct
