@@ -22,8 +22,10 @@
     }
     // Delegate remove button click
     document.getElementById('file-inputs').addEventListener('click', function(e) {
-        if (e.target.closest('.remove-file-btn')) {
-            const row = e.target.closest('.file-input-row');
+        const btn = e.target.closest('.remove-file-btn');
+        if (btn) {
+            e.preventDefault();
+            const row = btn.closest('.file-input-row');
             if (row) row.remove();
             updateRemoveButtons();
             resetPaymentIfFilesChanged();
