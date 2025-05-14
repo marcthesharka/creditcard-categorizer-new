@@ -56,20 +56,20 @@
             </a>
         </div>
         <h3 class="mt-4">Upload Credit Card Statements <small class="text-muted">(Up to 12, in PDF Format)</small></h3>
-        <form method="post" enctype="multipart/form-data" class="mb-3" id="upload-form">
+        <form method="post" enctype="multipart/form-data" class="mb-3" id="upload-form" autocomplete="off">
             <div id="file-inputs">
                 <input type="file" name="pdf" accept="application/pdf" class="form-control mb-2" required>
             </div>
             <button type="button" class="btn btn-secondary mb-3" onclick="addInput()">Upload another statement</button>
             <br>
             <input type="hidden" name="payment_complete" id="payment_complete" value="0">
-            <button type="submit" class="btn btn-primary" id="parse-btn"><i class="bi bi-robot"></i> Parse & Categorize</button>
+            <button type="button" class="btn btn-primary" id="parse-btn"><i class="bi bi-robot"></i> Parse & Categorize</button>
         </form>
         <!-- Stripe Elements Payment Form (hidden by default) -->
         <div id="payment-form" style="display:none; max-width:400px; margin:0 auto;">
           <div class="mb-2 fw-bold text-center">Amount to pay: $<span id="pay-amount"></span></div>
           <div id="payment-request-button" style="margin-bottom: 1em;"></div>
-          <form id="stripe-form">
+          <form id="stripe-form" autocomplete="off">
             <div id="card-element" class="mb-2"></div>
             <button id="pay-btn" class="btn btn-primary mt-2 w-100" type="submit">Pay</button>
           </form>
@@ -78,10 +78,16 @@
         <script src="https://js.stripe.com/v3/"></script>
         <script>
         const stripe = Stripe('pk_live_0W9dWXLLere1VUSm3FyRXyxp');
-        let elements, card, paymentRequest, prButton;
+        let elements, card, paymentRequest, prButton, paymentIntentSecret;
         function showPaymentForm(numPdfs) {
           document.getElementById('payment-form').style.display = 'block';
           document.getElementById('pay-amount').textContent = numPdfs;
+          // Only create Elements once
+          if (!elements) {
+            elements = stripe.elements();
+            card = elements.create('card');
+            card.mount('#card-element');
+          }
           fetch('/create-payment-intent', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -89,68 +95,67 @@
           })
           .then(res => res.json())
           .then(data => {
-            if (!elements) {
-              elements = stripe.elements();
-              card = elements.create('card');
-              card.mount('#card-element');
-            }
+            paymentIntentSecret = data.clientSecret;
             // Payment Request Button
-            paymentRequest = stripe.paymentRequest({
-              country: 'US',
-              currency: 'usd',
-              total: {
-                label: 'PDF Categorization',
-                amount: numPdfs * 100,
-              },
-              requestPayerName: true,
-              requestPayerEmail: true,
-            });
-            prButton = elements.create('paymentRequestButton', {
-              paymentRequest: paymentRequest,
-              style: { paymentRequestButton: { type: 'default', theme: 'dark', height: '44px' } }
-            });
-            paymentRequest.canMakePayment().then(function(result) {
-              if (result) {
-                prButton.mount('#payment-request-button');
-                document.getElementById('payment-request-button').style.display = 'block';
-              } else {
-                document.getElementById('payment-request-button').style.display = 'none';
-              }
-            });
-            paymentRequest.on('paymentmethod', function(ev) {
-              stripe.confirmCardPayment(
-                data.clientSecret,
-                { payment_method: ev.paymentMethod.id },
-                { handleActions: false }
-              ).then(function(confirmResult) {
-                if (confirmResult.error) {
-                  ev.complete('fail');
-                  document.getElementById('payment-message').textContent = confirmResult.error.message;
+            if (!paymentRequest) {
+              paymentRequest = stripe.paymentRequest({
+                country: 'US',
+                currency: 'usd',
+                total: {
+                  label: 'PDF Categorization',
+                  amount: numPdfs * 100,
+                },
+                requestPayerName: true,
+                requestPayerEmail: true,
+              });
+              prButton = elements.create('paymentRequestButton', {
+                paymentRequest: paymentRequest,
+                style: { paymentRequestButton: { type: 'default', theme: 'dark', height: '44px' } }
+              });
+              paymentRequest.canMakePayment().then(function(result) {
+                if (result) {
+                  prButton.mount('#payment-request-button');
+                  document.getElementById('payment-request-button').style.display = 'block';
                 } else {
-                  ev.complete('success');
-                  if (confirmResult.paymentIntent.status === 'requires_action') {
-                    stripe.confirmCardPayment(data.clientSecret).then(function(result) {
-                      if (result.error) {
-                        document.getElementById('payment-message').textContent = result.error.message;
-                      } else {
-                        document.getElementById('payment-message').textContent = 'Payment successful!';
-                        document.getElementById('payment_complete').value = '1';
-                        document.getElementById('payment-form').style.display = 'none';
-                        document.getElementById('upload-form').submit();
-                      }
-                    });
-                  } else {
-                    document.getElementById('payment-message').textContent = 'Payment successful!';
-                    document.getElementById('payment_complete').value = '1';
-                    document.getElementById('payment-form').style.display = 'none';
-                    document.getElementById('upload-form').submit();
-                  }
+                  document.getElementById('payment-request-button').style.display = 'none';
                 }
               });
-            });
+              paymentRequest.on('paymentmethod', function(ev) {
+                stripe.confirmCardPayment(
+                  paymentIntentSecret,
+                  { payment_method: ev.paymentMethod.id },
+                  { handleActions: false }
+                ).then(function(confirmResult) {
+                  if (confirmResult.error) {
+                    ev.complete('fail');
+                    document.getElementById('payment-message').textContent = confirmResult.error.message;
+                  } else {
+                    ev.complete('success');
+                    if (confirmResult.paymentIntent.status === 'requires_action') {
+                      stripe.confirmCardPayment(paymentIntentSecret).then(function(result) {
+                        if (result.error) {
+                          document.getElementById('payment-message').textContent = result.error.message;
+                        } else {
+                          document.getElementById('payment-message').textContent = 'Payment successful!';
+                          document.getElementById('payment_complete').value = '1';
+                          document.getElementById('payment-form').style.display = 'none';
+                          document.getElementById('upload-form').submit();
+                        }
+                      });
+                    } else {
+                      document.getElementById('payment-message').textContent = 'Payment successful!';
+                      document.getElementById('payment_complete').value = '1';
+                      document.getElementById('payment-form').style.display = 'none';
+                      document.getElementById('upload-form').submit();
+                    }
+                  }
+                });
+              });
+            }
+            // Stripe Card Form Submission
             document.getElementById('stripe-form').onsubmit = function(e) {
               e.preventDefault();
-              stripe.confirmCardPayment(data.clientSecret, {
+              stripe.confirmCardPayment(paymentIntentSecret, {
                 payment_method: {card: card}
               }).then(function(result) {
                 if (result.error) {
@@ -165,11 +170,17 @@
             };
           });
         }
+        // Only trigger payment flow on Parse & Categorize button
+        document.getElementById('parse-btn').addEventListener('click', function(e) {
+          e.preventDefault();
+          const numPdfs = document.querySelectorAll('input[type="file"][name="pdf"]').length;
+          showPaymentForm(numPdfs);
+        });
+        // Prevent form submit if payment not complete
         document.getElementById('upload-form').addEventListener('submit', function(e) {
           if (document.getElementById('payment_complete').value !== '1') {
             e.preventDefault();
-            const numPdfs = document.querySelectorAll('input[type="file"][name="pdf"]').length;
-            showPaymentForm(numPdfs);
+            return false;
           }
         });
         </script>
