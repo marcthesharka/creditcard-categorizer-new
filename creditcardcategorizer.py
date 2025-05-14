@@ -482,36 +482,6 @@ def categorize_and_enhance_transaction(description):
         print(f"OpenAI error (combined): {e}")
         return "Uncategorized", description
 
-@app.route('/create-checkout-session', methods=['POST'])
-def create_checkout_session():
-    data = request.get_json()
-    num_pdfs = data.get('num_pdfs', 1)
-    session = stripe.checkout.Session.create(
-        payment_method_types=['card'],
-        line_items=[{
-            'price_data': {
-                'currency': 'usd',
-                'product_data': {
-                    'name': 'PDF Categorization',
-                },
-                'unit_amount': 100,  # $1.00 in cents
-            },
-            'quantity': num_pdfs,
-        }],
-        mode='payment',
-        success_url=url_for('success', _external=True),
-        cancel_url=url_for('cancel', _external=True),
-    )
-    return jsonify({'url': session.url})
-
-@app.route('/success')
-def success():
-    return render_template('success.html')
-
-@app.route('/cancel')
-def cancel():
-    return render_template('cancel.html')
-
 @app.route('/create-payment-intent', methods=['POST'])
 def create_payment_intent():
     data = request.get_json()
@@ -525,6 +495,7 @@ def create_payment_intent():
         )
         return jsonify({'clientSecret': intent.client_secret})
     except Exception as e:
+        print(f'Stripe error: {e}')
         return jsonify({'error': 'Payment setup failed. Please try again or use a different card.'}), 400
 
 if __name__ == '__main__':
