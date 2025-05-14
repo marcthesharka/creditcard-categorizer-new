@@ -4,7 +4,19 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-10 col-lg-8">
+  <!-- Left Ad Column -->
+  <div class="col-lg-2 d-none d-lg-block">
+    <div class="sticky-top" style="top:80px;">
+      <ins class="adsbygoogle"
+           style="display:block;min-height:600px"
+           data-ad-client="ca-pub-2241745683809563"
+           data-ad-slot="1234567890"
+           data-ad-format="vertical"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+  </div>
+  <!-- Main Content -->
+  <div class="col-md-8 col-lg-8">
     <div class="card p-4 mb-4">
       <div class="card-body">
         <h2 class="card-title mb-3"><i class="bi bi-bar-chart"></i> Spending Summary</h2>
@@ -58,6 +70,17 @@
           <a href="/categorize/{{ job_id }}" class="btn btn-outline-primary ms-2"><i class="bi bi-pencil-square"></i> Edit Categories</a>
         </div>
       </div>
+    </div>
+  </div>
+  <!-- Right Ad Column -->
+  <div class="col-lg-2 d-none d-lg-block">
+    <div class="sticky-top" style="top:80px;">
+      <ins class="adsbygoogle"
+           style="display:block;min-height:600px"
+           data-ad-client="ca-pub-2241745683809563"
+           data-ad-slot="0987654321"
+           data-ad-format="vertical"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
     </div>
   </div>
 </div>
