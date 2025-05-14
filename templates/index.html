@@ -65,29 +65,57 @@
             <input type="hidden" name="payment_complete" id="payment_complete" value="0">
             <button type="submit" class="btn btn-primary" id="parse-btn"><i class="bi bi-robot"></i> Parse & Categorize</button>
         </form>
+        <!-- Stripe Elements Payment Form (hidden by default) -->
+        <div id="payment-form" style="display:none; max-width:400px; margin:0 auto;">
+          <form id="stripe-form">
+            <div id="card-element" class="mb-2"></div>
+            <button id="pay-btn" class="btn btn-primary mt-2 w-100" type="submit">Pay $<span id="pay-amount"></span></button>
+          </form>
+          <div id="payment-message" class="mt-2 text-danger"></div>
+        </div>
         <script src="https://js.stripe.com/v3/"></script>
         <script>
         const stripe = Stripe('pk_live_0W9dWXLLere1VUSm3FyRXyxp');
-        document.getElementById('upload-form').addEventListener('submit', function(e) {
-            if (document.getElementById('payment_complete').value !== '1') {
-                e.preventDefault();
-                const numPdfs = document.querySelectorAll('input[type="file"][name="pdf"]').length;
-                fetch('/create-checkout-session', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({num_pdfs: numPdfs})
-                })
-                .then(res => res.json())
-                .then(data => {
-                    stripe.redirectToCheckout({ sessionId: data.url.split('/')[data.url.split('/').length-1] });
-                });
+        let elements, card;
+        function showPaymentForm(numPdfs) {
+          document.getElementById('payment-form').style.display = 'block';
+          document.getElementById('pay-amount').textContent = numPdfs;
+          fetch('/create-payment-intent', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({num_pdfs: numPdfs})
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (!elements) {
+              elements = stripe.elements();
+              card = elements.create('card');
+              card.mount('#card-element');
             }
-        });
-        // Listen for redirect back from Stripe
-        if (window.location.pathname === '/success') {
-            document.getElementById('payment_complete').value = '1';
-            document.getElementById('upload-form').submit();
+            document.getElementById('stripe-form').onsubmit = function(e) {
+              e.preventDefault();
+              stripe.confirmCardPayment(data.clientSecret, {
+                payment_method: {card: card}
+              }).then(function(result) {
+                if (result.error) {
+                  document.getElementById('payment-message').textContent = result.error.message;
+                } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+                  document.getElementById('payment-message').textContent = 'Payment successful!';
+                  document.getElementById('payment_complete').value = '1';
+                  document.getElementById('payment-form').style.display = 'none';
+                  document.getElementById('upload-form').submit();
+                }
+              });
+            };
+          });
         }
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
+          if (document.getElementById('payment_complete').value !== '1') {
+            e.preventDefault();
+            const numPdfs = document.querySelectorAll('input[type="file"][name="pdf"]').length;
+            showPaymentForm(numPdfs);
+          }
+        });
         </script>
         <!-- Ad Space -->
         <div class="mt-4 mb-4">
