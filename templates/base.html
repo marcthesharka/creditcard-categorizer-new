@@ -36,11 +36,18 @@
             font-size: 1.3rem;
             transition: background 0.2s, color 0.2s;
             text-decoration: none;
+            border: none;
         }
-        .share-icon:hover {
+        .share-icon:hover, .share-icon:focus {
             background: #007bff;
             color: #fff;
             text-decoration: none;
+        }
+        .share-icon.btn {
+            box-shadow: none;
+        }
+        .share-icon.copy-link {
+            margin-left: 4px;
         }
     </style>
 </head>

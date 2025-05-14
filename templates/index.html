@@ -33,13 +33,7 @@
         <div class="mb-4" id="app-description">We do not store your data (files are deleted after usage).</div>
         <div class="mb-4 d-flex align-items-center gap-2" id="share-links">
             <span class="me-2 fw-semibold">Share:</span>
-            <a href="https://www.instagram.com/categorizemyspend" target="_blank" title="Instagram" class="share-icon">
-                <i class="bi bi-instagram"></i>
-            </a>
-            <a href="https://www.facebook.com/sharer/sharer.php?u=https://www.categorizemyspend.xyz" target="_blank" title="Facebook" class="share-icon">
-                <i class="bi bi-facebook"></i>
-            </a>
-            <a href="https://twitter.com/intent/tweet?url=https://www.categorizemyspend.xyz&text=Check%20out%20this%20awesome%20credit%20card%20transaction%20categorizer!%20It%20uses%20AI%20to%20automatically%20categorize%20your%20spending." target="_blank" title="X" class="share-icon">
+            <a href="https://twitter.com/intent/tweet?url=https://www.categorizemyspend.xyz&text=Check%20out%20this%20awesome%20credit%20card%20transaction%20categorizer!%20It%20uses%20AI%20to%20automatically%20categorize%20your%20spending." target="_blank" title="Share on X" class="share-icon">
                 <span style="display:inline-flex;align-items:center;justify-content:center;width:1.3em;height:1.3em;">
                   <svg viewBox="0 0 120 120" width="20" height="20" fill="currentColor" style="display:block;">
                     <g>
@@ -48,10 +42,18 @@
                   </svg>
                 </span>
             </a>
-            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://www.categorizemyspend.xyz" target="_blank" title="LinkedIn" class="share-icon">
+            <a href="https://www.facebook.com/sharer/sharer.php?u=https://www.categorizemyspend.xyz" target="_blank" title="Share on Facebook" class="share-icon">
+                <i class="bi bi-facebook"></i>
+            </a>
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://www.categorizemyspend.xyz" target="_blank" title="Share on LinkedIn" class="share-icon">
                 <i class="bi bi-linkedin"></i>
             </a>
-            <button class="btn btn-outline-secondary btn-sm ms-2" onclick="copyLink()">Copy Link</button>
+            <button class="share-icon btn p-0 border-0 copy-link" onclick="copyLink()" title="Copy Link">
+                <i class="bi bi-link-45deg"></i>
+            </button>
+            <a href="https://www.instagram.com/categorizemyspend" target="_blank" title="Follow on Instagram" class="share-icon">
+                <i class="bi bi-instagram"></i>
+            </a>
         </div>
         <h3 class="mt-4">Upload Credit Card Statements <small class="text-muted">(Up to 12, in PDF Format)</small></h3>
         <form method="post" enctype="multipart/form-data" class="mb-3">
