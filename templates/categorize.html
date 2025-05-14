@@ -37,14 +37,14 @@
                 </tr>
               </thead>
               <tbody>
-                {% for i, t in enumerate(transactions) %}
+                {% for t in transactions %}
                 <tr>
                   <td>{{ t.date.strftime('%Y-%m-%d') }}</td>
                   <td>{{ t.description }}</td>
                   <td>${{ '%.2f'|format(t.amount) }}</td>
                   <td>{{ t.card }}</td>
                   <td>
-                    <select name="category_{{ i }}" class="form-select form-select-sm">
+                    <select name="category_{{ loop.index0 }}" class="form-select form-select-sm">
                       <option value="">Uncategorized</option>
                       <option value="Food & Beverage" {% if t.category == 'Food & Beverage' %}selected{% endif %}>Food & Beverage</option>
                       <option value="Health & Wellness" {% if t.category == 'Health & Wellness' %}selected{% endif %}>Health & Wellness</option>
