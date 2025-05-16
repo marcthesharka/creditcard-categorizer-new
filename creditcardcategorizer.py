@@ -42,6 +42,8 @@ def parse_pdf_transactions(pdf_path):
             return parse_apple_pdf_transactions(pdf_path)
         elif "Capital One" in first_page_text:
             return parse_capitalone_pdf_transactions(pdf_path)
+        elif "American Express" in first_page_text or "americanexpress.com" in first_page_text:
+            return parse_amex_pdf_transactions(pdf_path)
         else:
             raise ValueError("Unknown statement format")
 
@@ -188,6 +190,81 @@ def parse_capitalone_pdf_transactions(pdf_path):
                         print(f"Error parsing Capital One line: {line} -- {e}")
                         continue
     print(f"Total Capital One transactions found: {len(transactions)}")
+    return transactions
+
+def parse_amex_pdf_transactions(pdf_path):
+    import re
+    from datetime import datetime, date
+    transactions = []
+    today = date.today()
+    with pdfplumber.open(pdf_path) as pdf:
+        # Skip first two pages, start on page 3 (index 2)
+        for i, page in enumerate(pdf.pages[2:], start=3):
+            text = page.extract_text()
+            if not text:
+                continue
+            lines = text.splitlines()
+            section = None
+            for idx, line in enumerate(lines):
+                # Start parsing payments/refunds after "Payments and Credits" > "Detail"
+                if "Payments and Credits" in line and (idx+1 < len(lines) and "Detail" in lines[idx+1]):
+                    section = "payments"
+                    continue
+                # Start parsing new charges after "New Charges" and "Detail"
+                if "New Charges" in line and (idx+1 < len(lines) and "Detail" in lines[idx+1]):
+                    section = "charges"
+                    continue
+                if section == "payments":
+                    # Stop at next section
+                    if ("Summary" in line or ("Detail" in line and idx != 0)):
+                        section = None
+                        continue
+                    # Parse payment/refund lines, skip AUTOPAY PAYMENT RECEIVED
+                    match = re.match(r"^(\d{2}/\d{2}/\d{2,4})\s+(.+?)\s+(-?\$?[\d,]+\.\d{2})$", line)
+                    if match:
+                        date_str, desc, amount_str = match.groups()
+                        if "AUTOPAY PAYMENT RECEIVED" in desc.upper():
+                            continue  # skip repayments
+                        try:
+                            parsed_date = datetime.strptime(date_str, "%m/%d/%y").date()
+                        except ValueError:
+                            try:
+                                parsed_date = datetime.strptime(date_str, "%m/%d/%Y").date()
+                            except Exception:
+                                continue
+                        amount = float(amount_str.replace('$', '').replace(',', ''))
+                        transactions.append({
+                            'date': datetime.combine(parsed_date, datetime.min.time()),
+                            'description': desc.strip(),
+                            'amount': amount,
+                            'category': '',
+                            'card': 'American Express'
+                        })
+                if section == "charges":
+                    # Stop at next section
+                    if ("Summary" in line or ("Detail" in line and idx != 0)):
+                        section = None
+                        continue
+                    # Parse charge lines
+                    match = re.match(r"^(\d{2}/\d{2}/\d{2,4})\s+(.+?)\s+([A-Z ]+)\s+([A-Z]{2})\s+(-?\$?[\d,]+\.\d{2})$", line)
+                    if match:
+                        date_str, desc, city, state, amount_str = match.groups()
+                        try:
+                            parsed_date = datetime.strptime(date_str, "%m/%d/%y").date()
+                        except ValueError:
+                            try:
+                                parsed_date = datetime.strptime(date_str, "%m/%d/%Y").date()
+                            except Exception:
+                                continue
+                        amount = float(amount_str.replace('$', '').replace(',', ''))
+                        transactions.append({
+                            'date': datetime.combine(parsed_date, datetime.min.time()),
+                            'description': f"{desc.strip()} {city.strip()} {state.strip()}",
+                            'amount': amount,
+                            'category': '',
+                            'card': 'American Express'
+                        })
+    print(f"Total American Express transactions found: {len(transactions)}")
     return transactions
 
 @app.route('/', methods=['GET', 'POST'])
@@ -486,7 +563,7 @@ def categorize_and_enhance_transaction(description):
 def create_payment_intent():
     data = request.get_json()
     num_pdfs = data.get('num_pdfs', 1)
-    amount = num_pdfs * 200  # $2 per PDF, in cents
+    amount = num_pdfs * 100  # $1 per PDF, in cents
     try:
         intent = stripe.PaymentIntent.create(
             amount=amount,
