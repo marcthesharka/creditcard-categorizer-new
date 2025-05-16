@@ -79,13 +79,13 @@
         <a class="navbar-brand" href="{{ url_for('index') }}">
           <i class="bi bi-credit-card"></i> CategorizeMySpend
         </a>
-        <div>
+        <ul class="navbar-nav ms-auto flex-row gap-2">
           {% if not (request.path.startswith('/categorize') or request.path.startswith('/summary')) %}
             <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
           {% endif %}
-          <a class="nav-link d-inline" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal">About</a>
-          <a class="nav-link d-inline" href="#" data-bs-toggle="modal" data-bs-target="#contactModal">Contact</a>
-        </div>
+          <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal">About</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#contactModal">Contact</a></li>
+        </ul>
       </div>
     </nav>
     <main class="container mb-5">
