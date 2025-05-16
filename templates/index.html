@@ -51,16 +51,21 @@
   <div class="col-md-8 col-lg-8">
     <div class="card p-4 mb-4">
       <div class="card-body">
-        <h1 class="card-title mb-3"><i class="bi bi-credit-card"></i>Credit Card Transaction Categorizer</h1>
-        <p class="lead">Ever wondered how much you're spending on all your credit card(s) and on what?</p>
-        <div class="d-flex align-items-center gap-3 mb-3" style="margin-top:-0.5em;">
-          <div class="d-flex align-items-center" style="font-size:0.98em;">
-            <img src="https://registry.npmmirror.com/@lobehub/icons-static-png/latest/files/light/cursor.png" alt="Cursor Logo" style="height:24px;width:24px;object-fit:contain;margin-right:6px;"> Built with <span class="fw-semibold ms-1">Cursor</span>
-          </div>
-          <div class="d-flex align-items-center" style="font-size:0.98em;">
-            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBkGZMOjNfNdWzIk-bqdZb7A_xkkaX986-rw&s" alt="OpenAI Logo" style="height:24px;width:28px;object-fit:contain;margin-right:6px;"> Powered by <span class="fw-semibold ms-1">OpenAI</span>
-          </div>
+        <div class="d-flex flex-wrap align-items-center justify-content-center mb-3" style="gap: 1rem;">
+          <span class="d-flex align-items-center">
+            <img src="{{ url_for('static', filename='credit-card.svg') }}" alt="Credit Card" style="height: 2rem; margin-right: 0.5rem;">
+            <span class="h4 mb-0">Credit Card Transaction Categorizer</span>
+          </span>
+          <span class="d-flex align-items-center">
+            <span class="me-1">Built with</span>
+            <img src="{{ url_for('static', filename='cursor-logo.svg') }}" alt="Cursor" style="height: 1.5rem; margin-right: 0.5rem;">
+            <span class="me-2">Cursor</span>
+            <span class="me-1">Powered by</span>
+            <img src="{{ url_for('static', filename='openai-logo.svg') }}" alt="OpenAI" style="height: 1.5rem;">
+            <span>OpenAI</span>
+          </span>
         </div>
+        <p class="lead">Ever wondered how much you're spending on all your credit card(s) and on what?</p>
         <ul class="list-unstyled mb-4">
           <li><i class="bi bi-check-circle text-success"></i> Upload all your monthly credit card statements as PDF over a given time period</li>
           <li><i class="bi bi-check-circle text-success"></i> See your transactions categorized in real-time</li>
@@ -365,4 +370,20 @@
     }
 </script>
 {% endblock %}
+
+<style>
+@media (max-width: 600px) {
+  .d-flex.flex-wrap.align-items-center.justify-content-center.mb-3 {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    text-align: center;
+  }
+  .d-flex.align-items-center > img {
+    height: 1.2rem !important;
+  }
+  .h4.mb-0 {
+    font-size: 1.1rem !important;
+  }
+}
+</style>
 
