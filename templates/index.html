@@ -145,7 +145,7 @@
         function updatePayAmount() {
           const numPdfs = document.querySelectorAll('input[type="file"][name="pdf"]:not([disabled])').length;
           const payAmountSpan = document.getElementById('pay-amount');
-          if (payAmountSpan) payAmountSpan.textContent = (numPdfs * 2).toFixed(2);
+          if (payAmountSpan) payAmountSpan.textContent = (numPdfs * 2).toString();
         }
         // Delegate remove button click robustly
         document.getElementById('file-inputs').addEventListener('click', function(e) {
@@ -183,7 +183,7 @@
         let lastNumPdfs = 0;
         function showPaymentForm(numPdfs) {
           document.getElementById('payment-form').style.display = 'block';
-          document.getElementById('pay-amount').textContent = (numPdfs * 2).toFixed(2);
+          document.getElementById('pay-amount').textContent = (numPdfs * 2).toString();
           lastNumPdfs = numPdfs;
           // Only create Elements once
           if (!elements) {
