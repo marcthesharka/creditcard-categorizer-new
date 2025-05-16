@@ -197,53 +197,60 @@ def parse_amex_pdf_transactions(pdf_path):
     from datetime import datetime, date
     transactions = []
     today = date.today()
+    section = None  # None, 'payments', 'credits', 'charges'
     with pdfplumber.open(pdf_path) as pdf:
         for i, page in enumerate(pdf.pages[2:], start=3):  # skip first two pages
             text = page.extract_text()
             if not text:
                 continue
             lines = text.splitlines()
-            in_charges_section = False
-            detail_count = 0
-            header_found = False
             for idx, line in enumerate(lines):
-                # Count "Detail" sections
-                if "Detail" in line:
-                    detail_count += 1
-                    if detail_count == 2:
-                        in_charges_section = True
-                        header_found = False  # Reset for new section
-                    else:
-                        in_charges_section = False
+                # Section detection
+                if "Payments" in line:
+                    section = 'payments'
                     continue
-
-                # Only parse after second "Detail"
-                if not in_charges_section:
+                if "Credits" in line:
+                    section = 'credits'
                     continue
-
-                # Look for the header row (user name + "Card Ending ..."), then "Amount"
-                if not header_found:
-                    if "Card Ending" in line:
-                        # Next line should be the header with "Amount"
-                        if idx + 1 < len(lines) and "Amount" in lines[idx + 1]:
-                            header_found = True
-                        continue
-                    else:
-                        continue
-
-                # Stop parsing if we hit "Fees"
+                if "New Charges" in line or "Detail" in line or "Detail Continued" in line:
+                    section = 'charges'
+                    continue
                 if "Fees" in line:
-                    break
+                    section = None
+                    break  # Stop parsing at Fees
 
-                # Match transaction rows: MM/DD/YY  MERCHANT  CITY  STATE  $AMOUNT
-                match = re.match(
-                    r"^(\d{2}/\d{2}/\d{2,4})\s+([A-Z0-9 .&'/-]+)\s+([A-Z .&'/-]+)\s+([A-Z]{2})\s+\$?(-?[\d,]+\.\d{2})$",
-                    line
-                )
-                if match:
-                    date_str, merchant, city, state, amount_str = match.groups()
-                    try:
-                        # Try both 2-digit and 4-digit year
+                # Parse lines by section
+                if section == 'payments':
+                    # Look for date and "autopay" to skip
+                    match = re.match(r"^(\d{2}/\d{2}/\d{2,4})\*?\s+(.+?)\s+(-?\$?[\d,]+\.\d{2})$", line)
+                    if match:
+                        desc = match.group(2).strip().lower()
+                        if "autopay" in desc:
+                            continue  # skip repayments
+                elif section == 'credits':
+                    match = re.match(r"^(\d{2}/\d{2}/\d{2,4})\*?\s+(.+?)\s+(-?\$?[\d,]+\.\d{2})$", line)
+                    if match:
+                        date_str, desc, amount_str = match.groups()
+                        try:
+                            parsed_date = datetime.strptime(date_str, "%m/%d/%y").date()
+                        except ValueError:
+                            parsed_date = datetime.strptime(date_str, "%m/%d/%Y").date()
+                        if parsed_date > today:
+                            parsed_date = parsed_date.replace(year=parsed_date.year - 1)
+                        date_obj = datetime.combine(parsed_date, datetime.min.time())
+                        amount = -abs(float(amount_str.replace('$', '').replace(',', '')))
+                        transactions.append({
+                            'date': date_obj,
+                            'description': desc.strip(),
+                            'amount': amount,
+                            'category': '',
+                            'card': 'American Express'
+                        })
+                elif section == 'charges':
+                    # Look for lines starting with a date
+                    match = re.match(r"^(\d{2}/\d{2}/\d{2,4})\s+(.+?)\s+([A-Z .&'/-]+)\s+([A-Z]{2})\s+\$?(-?[\d,]+\.\d{2})", line)
+                    if match:
+                        date_str, desc, city, state, amount_str = match.groups()
                         try:
                             parsed_date = datetime.strptime(date_str, "%m/%d/%y").date()
                         except ValueError:
@@ -254,14 +261,11 @@ def parse_amex_pdf_transactions(pdf_path):
                         amount = float(amount_str.replace('$', '').replace(',', ''))
                         transactions.append({
                             'date': date_obj,
-                            'description': f"{merchant.strip()} {city.strip()} {state.strip()}",
+                            'description': f"{desc.strip()} {city.strip()} {state.strip()}",
                             'amount': amount,
                             'category': '',
                             'card': 'American Express'
                         })
-                    except Exception as e:
-                        print(f"Error parsing Amex line: {line} -- {e}")
-                        continue
     print(f"Total American Express transactions found: {len(transactions)}")
     return transactions
 
@@ -360,7 +364,7 @@ def categorize(job_id):
     if transactions is None:
         if not os.path.exists(output_file):
             print(f"DEBUG: No results file found for job_id={job_id}")
-            return redirect(url_for('progress', job_id=job_id))
+            return render_template('categorize.html', transactions=[], filtered_transactions=[], error="Session expired or results not found. Please re-upload your statements.")
         with open(output_file, 'rb') as tf:
             print(f"DEBUG: Results loaded from file for job_id={job_id}")
             transactions = pickle.load(tf)
@@ -466,7 +470,7 @@ def summary():
             if results:
                 transactions = pickle.loads(results)
     if not transactions:
-        return redirect(url_for('index'))
+        return render_template('summary.html', summary=None, error="Session expired or results not found. Please re-upload your statements.")
     def is_repayment(txn):
         desc = txn['description'].strip().upper()
         return (
