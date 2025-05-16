@@ -183,7 +183,7 @@
         let lastNumPdfs = 0;
         function showPaymentForm(numPdfs) {
           document.getElementById('payment-form').style.display = 'block';
-          document.getElementById('pay-amount').textContent = numPdfs;
+          document.getElementById('pay-amount').textContent = (numPdfs * 2).toFixed(2);
           lastNumPdfs = numPdfs;
           // Only create Elements once
           if (!elements) {
