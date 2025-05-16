@@ -195,8 +195,6 @@ def parse_capitalone_pdf_transactions(pdf_path):
 def parse_amex_pdf_transactions(pdf_path):
     import re
     from datetime import datetime, date
-    def is_date_line(line):
-        return bool(re.match(r"^\d{2}/\d{2}/\d{2,4}", line.strip()))
     transactions = []
     today = date.today()
     with pdfplumber.open(pdf_path) as pdf:
@@ -205,76 +203,65 @@ def parse_amex_pdf_transactions(pdf_path):
             if not text:
                 continue
             lines = text.splitlines()
-            section = None
-            idx = 0
-            while idx < len(lines):
-                line = lines[idx]
-                # Start parsing payments/refunds after "Payments and Credits" > "Detail"
-                if "Payments and Credits" in line and (idx+1 < len(lines) and "Detail" in lines[idx+1]):
-                    section = "payments"
-                    idx += 1
+            in_charges_section = False
+            detail_count = 0
+            header_found = False
+            for idx, line in enumerate(lines):
+                # Count "Detail" sections
+                if "Detail" in line:
+                    detail_count += 1
+                    if detail_count == 2:
+                        in_charges_section = True
+                        header_found = False  # Reset for new section
+                    else:
+                        in_charges_section = False
                     continue
-                # Start parsing new charges after "New Charges" and "Detail"
-                if "New Charges" in line and (idx+1 < len(lines) and "Detail" in lines[idx+1]):
-                    section = "charges"
-                    idx += 1
+
+                # Only parse after second "Detail"
+                if not in_charges_section:
                     continue
-                if section == "payments":
-                    if ("Summary" in line or ("Detail" in line and idx != 0)):
-                        section = None
-                        idx += 1
+
+                # Look for the header row (user name + "Card Ending ..."), then "Amount"
+                if not header_found:
+                    if "Card Ending" in line:
+                        # Next line should be the header with "Amount"
+                        if idx + 1 < len(lines) and "Amount" in lines[idx + 1]:
+                            header_found = True
                         continue
-                    match = re.match(r"^(\d{2}/\d{2}/\d{2,4})\*?\s+(.+?)\s+(-?\$?[\d,]+\.\d{2})$", line)
-                    if match:
-                        date_str, desc, amount_str = match.groups()
-                        if "AUTOPAY PAYMENT RECEIVED" in desc.upper():
-                            idx += 1
-                            continue
+                    else:
+                        continue
+
+                # Stop parsing if we hit "Fees"
+                if "Fees" in line:
+                    break
+
+                # Match transaction rows: MM/DD/YY  MERCHANT  CITY  STATE  $AMOUNT
+                match = re.match(
+                    r"^(\d{2}/\d{2}/\d{2,4})\s+([A-Z0-9 .&'/-]+)\s+([A-Z .&'/-]+)\s+([A-Z]{2})\s+\$?(-?[\d,]+\.\d{2})$",
+                    line
+                )
+                if match:
+                    date_str, merchant, city, state, amount_str = match.groups()
+                    try:
+                        # Try both 2-digit and 4-digit year
                         try:
                             parsed_date = datetime.strptime(date_str, "%m/%d/%y").date()
                         except ValueError:
-                            try:
-                                parsed_date = datetime.strptime(date_str, "%m/%d/%Y").date()
-                            except Exception:
-                                idx += 1
-                                continue
+                            parsed_date = datetime.strptime(date_str, "%m/%d/%Y").date()
+                        if parsed_date > today:
+                            parsed_date = parsed_date.replace(year=parsed_date.year - 1)
+                        date_obj = datetime.combine(parsed_date, datetime.min.time())
                         amount = float(amount_str.replace('$', '').replace(',', ''))
                         transactions.append({
-                            'date': datetime.combine(parsed_date, datetime.min.time()),
-                            'description': desc.strip(),
+                            'date': date_obj,
+                            'description': f"{merchant.strip()} {city.strip()} {state.strip()}",
                             'amount': amount,
                             'category': '',
                             'card': 'American Express'
                         })
-                if section == "charges":
-                    if ("Summary" in line or ("Detail" in line and idx != 0)):
-                        section = None
-                        idx += 1
+                    except Exception as e:
+                        print(f"Error parsing Amex line: {line} -- {e}")
                         continue
-                    match = re.match(
-                        r"^(\d{2}/\d{2}/\d{2,4})\s+(.+?)\s+([A-Za-z .&'\-]+)\s+([A-Z]{2})\s+(-?\$?[\d,]+\.\d{2})$", line)
-                    if match:
-                        date_str, desc, city, state, amount_str = match.groups()
-                        try:
-                            parsed_date = datetime.strptime(date_str, "%m/%d/%y").date()
-                        except ValueError:
-                            try:
-                                parsed_date = datetime.strptime(date_str, "%m/%d/%Y").date()
-                            except Exception:
-                                idx += 1
-                                continue
-                        amount = float(amount_str.replace('$', '').replace(',', ''))
-                        transactions.append({
-                            'date': datetime.combine(parsed_date, datetime.min.time()),
-                            'description': f"{desc.strip()} {city.strip()} {state.strip()}",
-                            'amount': amount,
-                            'category': '',
-                            'card': 'American Express'
-                        })
-                        # Only skip the next line if it does NOT start with a date
-                        if idx+1 < len(lines) and not is_date_line(lines[idx+1]):
-                            idx += 1  # skip the next line
-                idx += 1
     print(f"Total American Express transactions found: {len(transactions)}")
     return transactions
 
