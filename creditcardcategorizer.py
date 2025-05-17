@@ -249,9 +249,10 @@ def parse_amex_pdf_transactions(pdf_path):
                     except Exception:
                         date_obj = None
                     # Try to extract amount from the end of the line
-                    amount_match = re.search(r'(\$?-?[\d,]+\.\d{2})\s*$', rest)
+                    amount_match = re.search(r'(\$?-?[\d,]+\.\d{2})[^\d]*$', rest)
                     if amount_match:
                         amount_str = amount_match.group(1)
+                        amount_str = re.sub(r'[^\d\.\-,]', '', amount_str)
                         try:
                             amount = float(amount_str.replace('$', '').replace(',', ''))
                         except Exception:
@@ -272,9 +273,10 @@ def parse_amex_pdf_transactions(pdf_path):
                     # If the line does not start with a date, it's a continuation of the previous transaction
                     if current_txn:
                         # Try to extract amount if this is the last line of a multi-line transaction
-                        amount_match = re.search(r'(\$?-?[\d,]+\.\d{2})\s*$', line)
+                        amount_match = re.search(r'(\$?-?[\d,]+\.\d{2})[^\d]*$', line)
                         if amount_match:
                             amount_str = amount_match.group(1)
+                            amount_str = re.sub(r'[^\d\.\-,]', '', amount_str)
                             try:
                                 amount = float(amount_str.replace('$', '').replace(',', ''))
                                 current_txn['amount'] = amount
