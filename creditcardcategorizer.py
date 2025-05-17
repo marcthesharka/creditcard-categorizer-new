@@ -83,6 +83,8 @@ def parse_chase_pdf_transactions(pdf_path):
                             parsed_date = parsed_date.replace(year=year-1)
                         date_obj = datetime.combine(parsed_date, datetime.min.time())
                         amount = float(amount_str.replace('$', '').replace(',', ''))
+                        if amount is None:
+                            amount = 0.0
                         transactions.append({
                             'date': date_obj,
                             'description': desc.strip(),
@@ -125,6 +127,8 @@ def parse_apple_pdf_transactions(pdf_path):
                             parsed_date = parsed_date.replace(year=parsed_date.year-1)
                         date_obj = datetime.combine(parsed_date, datetime.min.time())
                         amount = float(amount_str.replace('$', '').replace(',', ''))
+                        if amount is None:
+                            amount = 0.0
                         transactions.append({
                             'date': date_obj,
                             'description': desc.strip(),
@@ -179,6 +183,8 @@ def parse_capitalone_pdf_transactions(pdf_path):
                         # Exclude repayments: description contains 'CAPITAL ONE AUTOPAY'
                         if 'CAPITAL ONE AUTOPAY' in desc.upper():
                             continue
+                        if amount is None:
+                            amount = 0.0
                         transactions.append({
                             'date': date_obj,
                             'description': desc.strip(),

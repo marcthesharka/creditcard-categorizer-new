@@ -68,7 +68,7 @@
                   <td>{{ t.date.strftime('%Y-%m-%d') }}</td>
                   <td>{{ t.description }}</td>
                   <td>{{ t.enhanced_description }}</td>
-                  <td>${{ '%.2f'|format(t.amount) }}</td>
+                  <td>${{ '%.2f'|format(t.amount or 0) }}</td>
                   <td>{{ t.card }}</td>
                   <td>
                     <select name="category_{{ loop.index0 }}" class="form-select form-select-sm">
