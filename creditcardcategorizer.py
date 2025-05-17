@@ -197,7 +197,8 @@ def parse_amex_pdf_transactions(pdf_path):
     from datetime import datetime, date
     transactions = []
     today = date.today()
-    section = None  # None, 'payments', 'credits', 'charges'
+    in_transactions_section = False
+    current_txn = None
     with pdfplumber.open(pdf_path) as pdf:
         for i, page in enumerate(pdf.pages[2:], start=3):  # skip first two pages
             text = page.extract_text()
@@ -205,32 +206,33 @@ def parse_amex_pdf_transactions(pdf_path):
                 continue
             lines = text.splitlines()
             for idx, line in enumerate(lines):
-                # Section detection
-                if "Payments" in line:
-                    section = 'payments'
+                # Start parsing at 'Card Ending'
+                if not in_transactions_section and 'Card Ending' in line:
+                    in_transactions_section = True
                     continue
-                if "Credits" in line:
-                    section = 'credits'
+                if not in_transactions_section:
                     continue
-                if "New Charges" in line or "Detail" in line or "Detail Continued" in line:
-                    section = 'charges'
-                    continue
-                if "Fees" in line:
-                    section = None
-                    break  # Stop parsing at Fees
-
-                # Parse lines by section
-                if section == 'payments':
-                    # Look for date and "autopay" to skip
-                    match = re.match(r"^(\d{2}/\d{2}/\d{2,4})\*?\s+(.+?)\s+(-?\$?[\d,]+\.\d{2})$", line)
-                    if match:
-                        desc = match.group(2).strip().lower()
-                        if "autopay" in desc:
-                            continue  # skip repayments
-                elif section == 'credits':
-                    match = re.match(r"^(\d{2}/\d{2}/\d{2,4})\*?\s+(.+?)\s+(-?\$?[\d,]+\.\d{2})$", line)
-                    if match:
-                        date_str, desc, amount_str = match.groups()
+                # Stop at 'Fees'
+                if 'Fees' in line:
+                    # Save the last transaction if any
+                    if current_txn:
+                        # Only append if not AUTOPAY PAYMENT RECEIVED
+                        if not (current_txn['description'].strip().upper().startswith('AUTOPAY PAYMENT RECEIVED')):
+                            transactions.append(current_txn)
+                        current_txn = None
+                    in_transactions_section = False
+                    break
+                # Match a line that starts with a date (MM/DD/YY or MM/DD/YYYY)
+                date_match = re.match(r'^(\d{2}/\d{2}/\d{2,4})\*?\s+(.*)', line)
+                if date_match:
+                    # Save the previous transaction if any
+                    if current_txn:
+                        # Only append if not AUTOPAY PAYMENT RECEIVED
+                        if not (current_txn['description'].strip().upper().startswith('AUTOPAY PAYMENT RECEIVED')):
+                            transactions.append(current_txn)
+                    date_str, rest = date_match.groups()
+                    # Try to parse the date
+                    try:
                         try:
                             parsed_date = datetime.strptime(date_str, "%m/%d/%y").date()
                         except ValueError:
@@ -238,34 +240,51 @@ def parse_amex_pdf_transactions(pdf_path):
                         if parsed_date > today:
                             parsed_date = parsed_date.replace(year=parsed_date.year - 1)
                         date_obj = datetime.combine(parsed_date, datetime.min.time())
-                        amount = -abs(float(amount_str.replace('$', '').replace(',', '')))
-                        transactions.append({
-                            'date': date_obj,
-                            'description': desc.strip(),
-                            'amount': amount,
-                            'category': '',
-                            'card': 'American Express'
-                        })
-                elif section == 'charges':
-                    # Look for lines starting with a date
-                    match = re.match(r"^(\d{2}/\d{2}/\d{2,4})\s+(.+?)\s+([A-Z .&'/-]+)\s+([A-Z]{2})\s+\$?(-?[\d,]+\.\d{2})", line)
-                    if match:
-                        date_str, desc, city, state, amount_str = match.groups()
+                    except Exception:
+                        date_obj = None
+                    # Try to extract amount from the end of the line
+                    amount_match = re.search(r'(\$?-?[\d,]+\.\d{2})\s*$', rest)
+                    if amount_match:
+                        amount_str = amount_match.group(1)
                         try:
-                            parsed_date = datetime.strptime(date_str, "%m/%d/%y").date()
-                        except ValueError:
-                            parsed_date = datetime.strptime(date_str, "%m/%d/%Y").date()
-                        if parsed_date > today:
-                            parsed_date = parsed_date.replace(year=parsed_date.year - 1)
-                        date_obj = datetime.combine(parsed_date, datetime.min.time())
-                        amount = float(amount_str.replace('$', '').replace(',', ''))
-                        transactions.append({
-                            'date': date_obj,
-                            'description': f"{desc.strip()} {city.strip()} {state.strip()}",
-                            'amount': amount,
-                            'category': '',
-                            'card': 'American Express'
-                        })
+                            amount = float(amount_str.replace('$', '').replace(',', ''))
+                        except Exception:
+                            amount = 0.0
+                        # Remove the amount from the description
+                        desc = rest[:amount_match.start()].strip()
+                    else:
+                        amount = None
+                        desc = rest.strip()
+                    current_txn = {
+                        'date': date_obj,
+                        'description': desc,
+                        'amount': amount,
+                        'category': '',
+                        'card': 'American Express'
+                    }
+                else:
+                    # If the line does not start with a date, it's a continuation of the previous transaction
+                    if current_txn:
+                        # Try to extract amount if this is the last line of a multi-line transaction
+                        amount_match = re.search(r'(\$?-?[\d,]+\.\d{2})\s*$', line)
+                        if amount_match:
+                            amount_str = amount_match.group(1)
+                            try:
+                                amount = float(amount_str.replace('$', '').replace(',', ''))
+                                current_txn['amount'] = amount
+                            except Exception:
+                                pass
+                            # Remove the amount from the line before appending
+                            line = line[:amount_match.start()].strip()
+                        # Append the line to the description
+                        if current_txn['description']:
+                            current_txn['description'] += ' ' + line.strip()
+                        else:
+                            current_txn['description'] = line.strip()
+    # Save the last transaction if any
+    if current_txn:
+        if not (current_txn['description'].strip().upper().startswith('AUTOPAY PAYMENT RECEIVED')):
+            transactions.append(current_txn)
     print(f"Total American Express transactions found: {len(transactions)}")
     return transactions
 
