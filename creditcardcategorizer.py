@@ -604,10 +604,5 @@ def create_payment_intent():
         print(f'Stripe error: {e}')
         return jsonify({'error': 'Payment setup failed. Please try again or use a different card.'}), 400
 
-@app.route('/privacy-policy')
-def privacy_policy():
-    from datetime import datetime
-    return render_template('privacy_policy.html', current_date=datetime.now().strftime('%B %d, %Y'))
-
 if __name__ == '__main__':
     app.run(debug=True)
