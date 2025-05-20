@@ -20,6 +20,9 @@
     <div class="card p-4 mb-4">
       <div class="card-body">
         <h2 class="card-title mb-3"><i class="bi bi-pencil-square"></i> Categorize Transactions</h2>
+        <div class="alert alert-info mb-4">
+          <strong>Total Spend:</strong> ${{ '%.2f'|format(transactions|sum(attribute='amount') or 0) }}
+        </div>
         <div class="mb-4 d-flex align-items-center gap-2" id="share-links">
             <span class="me-2 fw-semibold">Share:</span>
             <a href="https://twitter.com/intent/tweet?url=https://www.categorizemyspend.xyz&text=Check%20out%20this%20awesome%20credit%20card%20transaction%20categorizer!%20It%20uses%20AI%20to%20automatically%20categorize%20your%20spending." target="_blank" title="Share on X" class="share-icon">
@@ -55,10 +58,10 @@
               <thead class="table-light">
                 <tr>
                   <th>Date</th>
-                  <th>Description</th>
-                  <th>Enhanced Description</th>
-                  <th>Amount</th>
                   <th>Card</th>
+                  <th>Raw Description</th>
+                  <th>Enhanced Description</th>
+                  <th>Amount</th>    
                   <th>Category</th>
                 </tr>
               </thead>
