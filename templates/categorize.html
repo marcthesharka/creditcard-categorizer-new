@@ -21,7 +21,7 @@
       <div class="card-body">
         <h2 class="card-title mb-3"><i class="bi bi-pencil-square"></i> Categorize Transactions</h2>
         <div class="alert alert-info mb-4">
-          <strong>Total Spend:</strong> ${{ '%.2f'|format(transactions|sum(attribute='amount') or 0) }}
+          <strong>Total Spend:</strong> ${{ '%.2f'|format(filtered_transactions|sum(attribute='amount') or 0) }}
         </div>
         <div class="mb-4 d-flex align-items-center gap-2" id="share-links">
             <span class="me-2 fw-semibold">Share:</span>
@@ -69,10 +69,10 @@
                 {% for t in transactions %}
                 <tr>
                   <td>{{ t.date.strftime('%Y-%m-%d') }}</td>
+                  <td>{{ t.card }}</td>
                   <td>{{ t.description }}</td>
                   <td>{{ t.enhanced_description }}</td>
                   <td>${{ '%.2f'|format(t.amount or 0) }}</td>
-                  <td>{{ t.card }}</td>
                   <td>
                     <select name="category_{{ loop.index0 }}" class="form-select form-select-sm">
                       <option value="">Uncategorized</option>
