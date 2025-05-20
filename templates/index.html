@@ -58,16 +58,15 @@
             <span>Powered by OpenAI <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBkGZMOjNfNdWzIk-bqdZb7A_xkkaX986-rw&s" alt="OpenAI" style="height: 1.5rem; margin-left: 0.5rem;"></span>
           </div>
         </div>
-        <p class="lead">Ever wondered how much you're spending on all your credit card(s) and on what?</p>
+        <p class="lead">Properly track your spend across all your credit card(s) with AI. No subscription required.</p>
+        <h4 class="mb-3">How It Works</h4>
         <ul class="list-unstyled mb-4">
-          <li><i class="bi bi-check-circle text-success"></i> Upload all your monthly credit card statements as PDF over a given time period</li>
+          <li><i class="bi bi-check-circle text-success"></i> Upload your monthly credit card statements as PDF</li>
           <li><i class="bi bi-check-circle text-success"></i> See your transactions categorized in real-time</li>
-          <li><i class="bi bi-check-circle text-success"></i> We charge $2 per PDF - upload more statements to get the most insight on spend patterns</li>
-          <li><i class="bi bi-check-circle text-success"></i> Export your categorized transactions to a CSV or Excel file for your own records</li>
-          <li><i class="bi bi-check-circle text-success"></i> We support Chase, American Express, Capital One, and Apple Card statements</li>
+          <li><i class="bi bi-check-circle text-success"></i> Export your categorized transactions to Excel/CSV file for your own records</li>
         </ul>
-        <div class="mb-4" id="app-description">The app was fully built using an AI agent - our primary goal is to demonstrate a usecase for how AI can automate mundane tasks.</div>
-        <div class="mb-4" id="app-description">We do not store your data (files are deleted after usage). Please download your categorized transactions to keep a copy of your data.</div>
+        <div class="mb-4" id="app-description">We accept Chase, American Express, Capital One, and Apple Card statements for U.S. customers.</div>
+        <div class="mb-4" id="app-description">We do not store your data (files are deleted after usage).</div>
         <div class="mb-4 d-flex align-items-center gap-2" id="share-links">
             <span class="me-2 fw-semibold">Share:</span>
             <a href="https://twitter.com/intent/tweet?url=https://www.categorizemyspend.xyz&text=Check%20out%20this%20awesome%20credit%20card%20transaction%20categorizer!%20It%20uses%20AI%20to%20automatically%20categorize%20your%20spending." target="_blank" title="Share on X" class="share-icon">
@@ -92,7 +91,7 @@
                 <i class="bi bi-instagram"></i>
             </a>
         </div>
-        <h3 class="mt-4">Upload Credit Card Statements <small class="text-muted">(Up to 12, in PDF Format)</small></h3>
+        <h3 class="mt-4">Upload Credit Card Statements <small class="text-muted">(the more you upload, the better the insights)</small></h3>
         <form method="post" enctype="multipart/form-data" class="mb-3" id="upload-form" autocomplete="off">
             <div id="file-inputs">
                 <div class="file-input-row position-relative mb-2">
@@ -318,10 +317,6 @@
                  (adsbygoogle = window.adsbygoogle || []).push({});
             </script>
         </div>
-        <div id="terminal-window" style="display:none; background:#222; color:rgb(255, 255, 255); font-family:monospace; padding:10px; margin-top:20px; height:200px; overflow-y:auto; border-radius:5px;">
-            <span>Parsing and categorizing transactions...</span>
-            <pre id="terminal-content"></pre>
-        </div>
       </div>
     </div>
   </div>
@@ -341,19 +336,6 @@
 
 {% block scripts %}
 <script>
-    document.querySelector('form').addEventListener('submit', function(e) {
-        document.getElementById('terminal-window').style.display = 'block';
-        document.getElementById('terminal-content').textContent = '';
-        pollProgress();
-    });
-    function pollProgress() {
-        fetch('/progress')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('terminal-content').textContent = data;
-                setTimeout(pollProgress, 1000);
-            });
-    }
     function copyLink() {
         navigator.clipboard.writeText(window.location.href).then(function() {
             alert('Link copied to clipboard!');
